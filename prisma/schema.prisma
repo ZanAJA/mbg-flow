@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         String
+  sppgId       String
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  sppg         Sppg       @relation(fields: [sppgId], references: [id])
+  auditLogs    AuditLog[]
+}
+
+model Sppg {
+  id         String            @id @default(cuid())
+  name       String
+  address    String
+  users      User[]
+  batches    ProductionBatch[]
+}
+
+model School {
+  id          String             @id @default(cuid())
+  name        String
+  address     String
+  lat         Float?
+  lng         Float?
+  distanceKm  Float              @default(0)
+  allocations SchoolAllocation[]
+}
+
+model Ingredient {
+  id       String          @id @default(cuid())
+  name     String
+  category String
+  unit     String
+  lots     IngredientLot[]
+}
+
+model IngredientLot {
+  id           String     @id @default(cuid())
+  ingredientId String
+  lotCode      String
+  quantity     Float
+  expiryDate   DateTime
+  receivedAt   DateTime
+  storageType  String
+  supplier     String
+  status       String     @default("AVAILABLE")
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+}
+
+model Menu {
+  id                    String            @id @default(cuid())
+  name                  String
+  source                String
+  recipeJson            String
+  recommendedComponents String
+  aiSnapshot            String?
+  durabilityNote        String
+  batches               ProductionBatch[]
+}
+
+model ProductionBatch {
+  id            String                @id @default(cuid())
+  code          String                @unique
+  date          DateTime
+  portionType   String
+  menuId        String
+  menuSnapshot  String
+  targetQty     Int
+  actualQty     Int
+  status        String
+  readyAt       DateTime?
+  safeUntil     DateTime?
+  sppgId        String
+  createdAt     DateTime              @default(now())
+  menu          Menu                  @relation(fields: [menuId], references: [id])
+  sppg          Sppg                  @relation(fields: [sppgId], references: [id])
+  components    ProductionComponent[]
+  allocations   SchoolAllocation[]
+}
+
+model ProductionComponent {
+  id                    String          @id @default(cuid())
+  productionBatchId     String
+  name                  String
+  componentKey          String
+  affectsSafetyDeadline Boolean
+  status                String          @default("NOT_STARTED")
+  startedAt             DateTime?
+  finishedAt            DateTime?
+  safeWindowMinutes     Int
+  safeUntil             DateTime?
+  sortOrder             Int             @default(0)
+  batch                 ProductionBatch @relation(fields: [productionBatchId], references: [id], onDelete: Cascade)
+}
+
+model SchoolAllocation {
+  id                String          @id @default(cuid())
+  productionBatchId String
+  schoolId          String
+  portionQty        Int
+  packedQty         Int             @default(0)
+  readyAt           DateTime?
+  batch             ProductionBatch @relation(fields: [productionBatchId], references: [id], onDelete: Cascade)
+  school            School          @relation(fields: [schoolId], references: [id])
+  deliveryBatch     DeliveryBatch?
+}
+
+model DeliveryBatch {
+  id           String           @id @default(cuid())
+  code         String           @unique
+  allocationId String           @unique
+  status       String           @default("PLANNED")
+  etaMinutes   Int?
+  departedAt   DateTime?
+  receivedAt   DateTime?
+  readyAt      DateTime?
+  qrToken      String           @unique
+  allocation   SchoolAllocation @relation(fields: [allocationId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String
+  action      String
+  entityType  String
+  entityId    String
+  beforeJson  String?
+  afterJson   String?
+  reason      String?
+  createdAt   DateTime @default(now())
+  actor       User     @relation(fields: [actorUserId], references: [id])
+}
+
+model SafetyRule {
+  id                    String  @id @default(cuid())
+  componentKey          String  @unique
+  label                 String
+  safeWindowMinutes     Int
+  affectsSafetyDeadline Boolean
+  validated             Boolean @default(true)
+  notes                 String
+}

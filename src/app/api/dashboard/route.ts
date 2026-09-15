@@ -1,0 +1,51 @@
+import { prisma } from "@/shared/db/prisma";
+import { deriveSafetyStatus } from "@/shared/safety/engine";
+import { daysUntil } from "@/shared/lib/format";
+import { handleApiError, jsonOk, requireUser } from "@/shared/lib/http";
+import { serializeBatch, serializeDelivery } from "@/shared/domain/serializers";
+
+export async function GET() {
+  try {
+    const user = await requireUser(["SUPERVISOR", "KITCHEN", "DISTRIBUTOR"]);
+    const now = new Date();
+    const [batches, deliveries, lots] = await Promise.all([
+      prisma.productionBatch.findMany({
+        where: { status: { not: "CLOSED" } },
+        include: {
+          menu: true,
+          sppg: true,
+          components: true,
+          allocations: { include: { school: true, deliveryBatch: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.deliveryBatch.findMany({
+        include: {
+          allocation: {
+            include: { school: true, batch: { include: { menu: true, sppg: true } } },
+          },
+        },
+      }),
+      prisma.ingredientLot.findMany({ include: { ingredient: true } }),
+    ]);
+
+    const expiryWarnings = lots
+      .filter((lot) => daysUntil(lot.expiryDate) <= 3)
+      .sort((a, b) => a.expiryDate.getTime() - b.expiryDate.getTime());
+
+    const deadlineWarnings = deliveries.filter((row) => {
+      const status = deriveSafetyStatus(row.allocation.batch.safeUntil, now);
+      return (status === "WARNING" || status === "PAST_LIMIT") && row.status !== "RECEIVED";
+    });
+
+    return jsonOk({
+      role: user.role,
+      productionBatches: batches.map((b) => serializeBatch(b, now)),
+      deliveries: deliveries.map((d) => serializeDelivery(d, now)),
+      expiryWarnings,
+      deadlineWarnings: deadlineWarnings.map((d) => serializeDelivery(d, now)),
+    });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}

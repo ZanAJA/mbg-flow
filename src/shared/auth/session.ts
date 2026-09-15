@@ -1,0 +1,50 @@
+import { SignJWT, jwtVerify } from "jose";
+import { JWT_TTL_SECONDS, SESSION_COOKIE, type Role } from "@/shared/types/enums";
+
+export type SessionUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  sppgId: string;
+};
+
+function secret() {
+  const value = process.env.JWT_SECRET ?? "mbg-mvp-dev-secret-change-in-production";
+  return new TextEncoder().encode(value);
+}
+
+export async function signSession(user: SessionUser) {
+  return new SignJWT(user)
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject(user.id)
+    .setIssuedAt()
+    .setExpirationTime(`${JWT_TTL_SECONDS}s`)
+    .sign(secret());
+}
+
+export async function verifySessionToken(token: string): Promise<SessionUser | null> {
+  try {
+    const { payload } = await jwtVerify(token, secret());
+    if (
+      typeof payload.id !== "string" ||
+      typeof payload.role !== "string" ||
+      typeof payload.email !== "string" ||
+      typeof payload.name !== "string" ||
+      typeof payload.sppgId !== "string"
+    ) {
+      return null;
+    }
+    return {
+      id: payload.id,
+      name: payload.name,
+      email: payload.email,
+      role: payload.role as Role,
+      sppgId: payload.sppgId,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export { SESSION_COOKIE };
