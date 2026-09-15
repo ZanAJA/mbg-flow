@@ -258,6 +258,14 @@ export async function markPacked(input: {
     throw new HttpError(400, "Jumlah kemasan tidak valid.");
   }
 
+  if (
+    allocation.deliveryBatch &&
+    (allocation.deliveryBatch.status === "IN_DELIVERY" ||
+      allocation.deliveryBatch.status === "RECEIVED")
+  ) {
+    throw new HttpError(409, "Tidak dapat mengubah kemasan setelah pengiriman dimulai.");
+  }
+
   const now = new Date();
   const ready = input.packedQty >= allocation.portionQty;
   const updated = await prisma.schoolAllocation.update({
@@ -280,6 +288,18 @@ export async function markPacked(input: {
         entityType: "DeliveryBatch",
         entityId: allocation.deliveryBatch.id,
         after: { packedQty: input.packedQty, readyAt: now },
+      });
+    } else if (!ready && allocation.deliveryBatch.status === "READY") {
+      await prisma.deliveryBatch.update({
+        where: { id: allocation.deliveryBatch.id },
+        data: { status: "PLANNED", readyAt: null },
+      });
+      await writeAudit({
+        actorUserId: input.actorUserId,
+        action: "delivery_batch_unready",
+        entityType: "DeliveryBatch",
+        entityId: allocation.deliveryBatch.id,
+        after: { packedQty: input.packedQty, status: "PLANNED" },
       });
     }
   }

@@ -23,9 +23,14 @@ const demos = [
   { role: "Distributor", email: "distributor@sppg.local", password: "distributor" },
 ];
 
+function safeNextPath(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/dashboard";
+  return value;
+}
+
 export function LoginContainer() {
   const router = useRouter();
-  const next = useSearchParams().get("next") ?? "/dashboard";
+  const next = safeNextPath(useSearchParams().get("next"));
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { email: "supervisor@sppg.local", password: "supervisor" },
@@ -37,9 +42,9 @@ export function LoginContainer() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(values),
     });
-    const body = await response.json();
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
     if (!response.ok) {
-      toast.error(body.error ?? "Gagal masuk");
+      toast.error(body?.error ?? "Gagal masuk");
       return;
     }
     router.push(next);

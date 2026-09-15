@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { ZodError } from "zod";
 import { prisma } from "@/shared/db/prisma";
 import { verifySessionToken, SESSION_COOKIE, type SessionUser } from "@/shared/auth/session";
 import { assertRole } from "@/shared/auth/rbac";
@@ -45,9 +46,22 @@ export async function requireUser(roles?: Role[]) {
 
 export function handleApiError(error: unknown) {
   if (error instanceof HttpError) return jsonError(error.status, error.message);
+  if (error instanceof ZodError) {
+    const message = error.issues[0]?.message ?? "Data permintaan tidak valid.";
+    return jsonError(400, message);
+  }
   if (error && typeof error === "object" && "status" in error) {
     const status = Number((error as { status: number }).status) || 400;
     return jsonError(status, error instanceof Error ? error.message : "Permintaan ditolak.");
+  }
+  const message = error instanceof Error ? error.message : "";
+  if (
+    message.includes("Can't reach database server") ||
+    message.includes("P1001") ||
+    (error && typeof error === "object" && "name" in error && (error as { name: string }).name === "PrismaClientInitializationError")
+  ) {
+    console.error(error);
+    return jsonError(503, "Database tidak tersedia. Pastikan PostgreSQL berjalan di localhost:5432.");
   }
   console.error(error);
   return jsonError(500, "Terjadi kesalahan server.");

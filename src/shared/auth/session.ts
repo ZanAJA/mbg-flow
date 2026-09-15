@@ -10,7 +10,13 @@ export type SessionUser = {
 };
 
 function secret() {
-  const value = process.env.JWT_SECRET ?? "mbg-mvp-dev-secret-change-in-production";
+  const value = process.env.JWT_SECRET;
+  if (!value) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("JWT_SECRET harus di-set di production.");
+    }
+    return new TextEncoder().encode("mbg-mvp-dev-secret-change-in-production");
+  }
   return new TextEncoder().encode(value);
 }
 

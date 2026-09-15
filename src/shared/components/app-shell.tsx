@@ -77,7 +77,7 @@ function NavLinks({
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const isPublic = pathname === "/login" || pathname.startsWith("/q/");
+  const isPublic = pathname === "/" || pathname === "/login" || pathname.startsWith("/q/");
 
   const me = useQuery({
     queryKey: ["me"],

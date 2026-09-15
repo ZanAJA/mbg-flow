@@ -9,6 +9,7 @@ import { Countdown } from "@/shared/components/countdown";
 import { DeliveryBadge, ProductionBadge, SafetyBadge } from "@/shared/components/status-badges";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { formatDateTime } from "@/shared/lib/format";
+import type { SessionShape } from "@/shared/components/session-types";
 
 type Batch = {
   id: string;
@@ -31,12 +32,19 @@ type Batch = {
 
 export function BatchDetailContainer() {
   const params = useParams<{ id: string }>();
+  const me = useQuery({
+    queryKey: ["me"],
+    queryFn: () => apiFetch<SessionShape>("/api/auth/me"),
+  });
   const query = useQuery({
     queryKey: ["production-batch", params.id],
     queryFn: () => apiFetch<Batch>(`/api/production-batches/${params.id}`),
     refetchInterval: 5_000,
   });
   const batch = query.data?.data;
+  const role = me.data?.data?.role;
+  const canDistribution = role === "SUPERVISOR" || role === "DISTRIBUTOR";
+  const canProduction = role === "SUPERVISOR" || role === "KITCHEN";
 
   return (
     <div>
@@ -50,6 +58,11 @@ export function BatchDetailContainer() {
             <div className="flex flex-wrap gap-2">
               <ProductionBadge status={batch.productionStatus} />
               <SafetyBadge status={batch.safetyStatus} />
+              {canProduction ? (
+                <Link className="self-center text-sm font-medium text-primary" href={`/production/${batch.id}`}>
+                  Pelacakan produksi
+                </Link>
+              ) : null}
             </div>
             <Card>
               <CardContent className="space-y-2 pt-4 text-sm">
@@ -76,9 +89,14 @@ export function BatchDetailContainer() {
                     </div>
                     <div className="flex items-center gap-2">
                       {allocation.deliveryBatch ? <DeliveryBadge status={allocation.deliveryBatch.status} /> : null}
-                      {allocation.deliveryBatch ? (
+                      {allocation.deliveryBatch && canDistribution ? (
                         <Link className="text-sm text-primary" href={`/distribution/${allocation.deliveryBatch.id}`}>
                           Distribusi
+                        </Link>
+                      ) : null}
+                      {allocation.deliveryBatch && !canDistribution ? (
+                        <Link className="text-sm text-primary" href={`/labels/${allocation.deliveryBatch.id}`}>
+                          Label QR
                         </Link>
                       ) : null}
                     </div>

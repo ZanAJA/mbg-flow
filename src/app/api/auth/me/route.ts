@@ -1,7 +1,10 @@
-import { getSessionUser, jsonError, jsonOk } from "@/shared/lib/http";
+import { handleApiError, jsonOk, requireUser } from "@/shared/lib/http";
 
 export async function GET() {
-  const user = await getSessionUser();
-  if (!user) return jsonError(401, "Belum masuk.");
-  return jsonOk(user);
+  try {
+    const user = await requireUser();
+    return jsonOk(user);
+  } catch (error) {
+    return handleApiError(error);
+  }
 }

@@ -12,7 +12,7 @@ import { DeliveryBadge, ProductionBadge, SafetyBadge } from "@/shared/components
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
-import { formatDateTime } from "@/shared/lib/format";
+import { formatDateTime, toLocalDatetimeValue } from "@/shared/lib/format";
 import { useQuery as useMe } from "@tanstack/react-query";
 import type { SessionShape } from "@/shared/components/session-types";
 
@@ -188,7 +188,9 @@ export function ProductionDetailContainer() {
                           onClick={() =>
                             setCorrection({
                               id: component.id,
-                              finishedAt: new Date().toISOString().slice(0, 16),
+                              finishedAt: toLocalDatetimeValue(
+                                component.finishedAt ? new Date(component.finishedAt) : new Date(),
+                              ),
                               reason: "",
                             })
                           }

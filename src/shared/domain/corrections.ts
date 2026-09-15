@@ -21,9 +21,10 @@ export async function correctEntity(input: {
     if (!current) throw new HttpError(404, "Komponen tidak ditemukan.");
 
     const data: {
-      startedAt?: Date;
-      finishedAt?: Date;
+      startedAt?: Date | null;
+      finishedAt?: Date | null;
       safeUntil?: Date | null;
+      status?: "NOT_STARTED" | "IN_PROGRESS" | "FINISHED";
     } = {};
 
     if (typeof input.patch.startedAt === "string") {
@@ -36,6 +37,12 @@ export async function correctEntity(input: {
         safeWindowMinutes: current.safeWindowMinutes,
         affectsSafetyDeadline: current.affectsSafetyDeadline,
       });
+      data.status = "FINISHED";
+      if (!current.startedAt && data.startedAt === undefined) {
+        data.startedAt = data.finishedAt;
+      }
+    } else if (data.startedAt && current.status === "NOT_STARTED") {
+      data.status = "IN_PROGRESS";
     }
 
     const updated = await prisma.productionComponent.update({

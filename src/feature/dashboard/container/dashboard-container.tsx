@@ -8,8 +8,10 @@ import { Countdown } from "@/shared/components/countdown";
 import { DeliveryBadge, ProductionBadge, SafetyBadge } from "@/shared/components/status-badges";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { formatDateTime } from "@/shared/lib/format";
+import type { Role } from "@/shared/types/enums";
 
 type DashboardData = {
+  role: Role;
   productionBatches: Array<{
     id: string;
     code: string;
@@ -54,6 +56,9 @@ export function DashboardContainer() {
   });
 
   const data = query.data?.data;
+  const role = data?.role;
+  const canProduction = role === "SUPERVISOR" || role === "KITCHEN";
+  const canDistribution = role === "SUPERVISOR" || role === "DISTRIBUTOR";
   const besar = data?.productionBatches.find((b) => b.portionType === "BESAR");
   const kecil = data?.productionBatches.find((b) => b.portionType === "KECIL");
 
@@ -85,9 +90,15 @@ export function DashboardContainer() {
                           Target {batch.targetQty} porsi · aktual {batch.actualQty}
                         </p>
                         <Countdown safeUntil={batch.safeUntil} serverNow={query.data!.serverNow} />
-                        <Link className="text-sm font-medium text-primary" href={`/production/${batch.id}`}>
-                          Buka pelacakan produksi
-                        </Link>
+                        {canProduction ? (
+                          <Link className="text-sm font-medium text-primary" href={`/production/${batch.id}`}>
+                            Buka pelacakan produksi
+                          </Link>
+                        ) : (
+                          <Link className="text-sm font-medium text-primary" href={`/batches/${batch.id}`}>
+                            Buka detail batch
+                          </Link>
+                        )}
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground">
@@ -118,9 +129,15 @@ export function DashboardContainer() {
                       <div className="flex items-center gap-2">
                         <DeliveryBadge status={row.deliveryStatus} />
                         <SafetyBadge status={row.safetyStatus} />
-                        <Link className="text-sm text-primary" href={`/distribution/${row.id}`}>
-                          Detail
-                        </Link>
+                        {canDistribution ? (
+                          <Link className="text-sm text-primary" href={`/distribution/${row.id}`}>
+                            Detail
+                          </Link>
+                        ) : (
+                          <Link className="text-sm text-primary" href={`/labels/${row.id}`}>
+                            Label QR
+                          </Link>
+                        )}
                       </div>
                     </div>
                   ))

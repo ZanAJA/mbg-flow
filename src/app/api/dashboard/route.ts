@@ -1,6 +1,6 @@
 import { prisma } from "@/shared/db/prisma";
 import { deriveSafetyStatus } from "@/shared/safety/engine";
-import { daysUntil } from "@/shared/lib/format";
+import { daysUntil, jakartaDayBounds } from "@/shared/lib/format";
 import { handleApiError, jsonOk, requireUser } from "@/shared/lib/http";
 import { serializeBatch, serializeDelivery } from "@/shared/domain/serializers";
 
@@ -8,9 +8,13 @@ export async function GET() {
   try {
     const user = await requireUser(["SUPERVISOR", "KITCHEN", "DISTRIBUTOR"]);
     const now = new Date();
+    const { start, end } = jakartaDayBounds(now);
     const [batches, deliveries, lots] = await Promise.all([
       prisma.productionBatch.findMany({
-        where: { status: { not: "CLOSED" } },
+        where: {
+          status: { not: "CLOSED" },
+          date: { gte: start, lte: end },
+        },
         include: {
           menu: true,
           sppg: true,
@@ -20,6 +24,11 @@ export async function GET() {
         orderBy: { createdAt: "desc" },
       }),
       prisma.deliveryBatch.findMany({
+        where: {
+          allocation: {
+            batch: { date: { gte: start, lte: end } },
+          },
+        },
         include: {
           allocation: {
             include: { school: true, batch: { include: { menu: true, sppg: true } } },
