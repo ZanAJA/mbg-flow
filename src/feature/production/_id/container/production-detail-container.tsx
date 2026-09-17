@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/shared/lib/api";
 import { PageHeader, QueryState } from "@/shared/components/page-header";
+import { ActionLink } from "@/shared/components/action-link";
 import { Countdown } from "@/shared/components/countdown";
 import { DeliveryBadge, ProductionBadge, SafetyBadge } from "@/shared/components/status-badges";
 import { Button } from "@/shared/components/ui/button";
@@ -134,10 +134,7 @@ export function ProductionDetailContainer() {
 
   return (
     <div>
-      <PageHeader
-        title={batch ? `${batch.code} · ${batch.menu.name}` : "Pelacakan produksi"}
-        description="Semua komponen bisa Mulai secara independen. Selesai hanya aktif setelah komponen itu dimulai. Waktu dicatat server."
-      />
+      <PageHeader title={batch ? `${batch.code} · ${batch.menu.name}` : "Pelacakan produksi"} />
       <QueryState isLoading={query.isLoading} error={query.error} onRetry={() => query.refetch()}>
         {batch ? (
           <div className="space-y-6">
@@ -148,7 +145,9 @@ export function ProductionDetailContainer() {
                 {batch.portionType === "BESAR" ? "Porsi Besar" : "Porsi Kecil"} · {batch.actualQty}/{batch.targetQty} porsi · {batch.sppg.name}
               </span>
             </div>
-            <Countdown safeUntil={batch.safeUntil} serverNow={query.data!.serverNow} />
+            <div className="flex justify-center sm:justify-start">
+              <Countdown safeUntil={batch.safeUntil} serverNow={query.data!.serverNow} />
+            </div>
 
             <div className="grid gap-3">
               {batch.components.map((component) => (
@@ -235,9 +234,7 @@ export function ProductionDetailContainer() {
                       {allocation.deliveryBatch ? (
                         <div className="flex items-center gap-2">
                           <DeliveryBadge status={allocation.deliveryBatch.status} />
-                          <Link className="text-sm text-primary" href={`/labels/${allocation.deliveryBatch.id}`}>
-                            Label QR
-                          </Link>
+                          <ActionLink href={`/labels/${allocation.deliveryBatch.id}`}>Label</ActionLink>
                         </div>
                       ) : null}
                     </div>

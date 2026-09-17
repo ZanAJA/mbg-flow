@@ -46,22 +46,21 @@ export function PublicQrContainer() {
           {data ? (
             <>
               <h1 className="text-2xl font-semibold">{data.menuName}</h1>
-              <p className="text-sm">{data.sppgName}</p>
-              <p className="text-sm">{data.schoolName} · {data.portionQty} porsi</p>
-              <p className="text-xs text-muted-foreground">{data.productionCode} · {data.deliveryCode}</p>
+              <p className="text-sm text-muted-foreground">
+                {data.schoolName} · {data.portionQty} porsi
+              </p>
               <div className="flex flex-wrap gap-2">
                 <DeliveryBadge status={data.deliveryStatus} />
                 <SafetyBadge status={data.safetyStatus} />
               </div>
-              <p className="text-sm">Batas aman konsumsi: {formatDateTime(data.safeUntil)}</p>
+              <div className="flex justify-center py-2">
+                <Countdown safeUntil={data.safeUntil} serverNow={query.data!.serverNow} />
+              </div>
               {data.receivedAt ? (
-                <p className="text-sm">Diterima sekolah: {formatDateTime(data.receivedAt)}</p>
+                <p className="text-sm text-center text-muted-foreground">
+                  Diterima {formatDateTime(data.receivedAt)}
+                </p>
               ) : null}
-              <Countdown safeUntil={data.safeUntil} serverNow={query.data!.serverNow} />
-              <p className="text-xs text-muted-foreground">
-                Halaman ini tidak memerlukan login dan bersifat baca saja. Jika batas aman terlewati, peringatan tetap ditampilkan.
-                Ini sistem monitoring, bukan diagnosis keamanan pangan.
-              </p>
             </>
           ) : null}
         </CardContent>

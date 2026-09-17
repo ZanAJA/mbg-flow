@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/api";
 import { PageHeader, QueryState, EmptyState } from "@/shared/components/page-header";
+import { ActionLink } from "@/shared/components/action-link";
 import { DeliveryBadge, SafetyBadge } from "@/shared/components/status-badges";
 import { Card, CardContent } from "@/shared/components/ui/card";
 
@@ -31,10 +31,7 @@ export function DistributionListContainer() {
 
   return (
     <div>
-      <PageHeader
-        title="Perencanaan distribusi"
-        description="Urutan rekomendasi: sekolah terjauh lebih dulu, dengan Delivery Batch yang sudah READY diprioritaskan. Status pengiriman dan status aman ditampilkan terpisah."
-      />
+      <PageHeader title="Perencanaan distribusi" />
       <QueryState isLoading={query.isLoading} error={query.error} onRetry={() => query.refetch()}>
         {rows.length === 0 ? (
           <EmptyState
@@ -59,9 +56,7 @@ export function DistributionListContainer() {
                   <div className="flex items-center gap-2">
                     <DeliveryBadge status={row.deliveryStatus} />
                     <SafetyBadge status={row.safetyStatus} />
-                    <Link className="text-sm font-medium text-primary" href={`/distribution/${row.id}`}>
-                      Operasikan
-                    </Link>
+                    <ActionLink href={`/distribution/${row.id}`}>Operasikan</ActionLink>
                   </div>
                 </CardContent>
               </Card>

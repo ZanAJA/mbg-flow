@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -9,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { apiFetch } from "@/shared/lib/api";
 import { PageHeader, QueryState, EmptyState } from "@/shared/components/page-header";
+import { ActionLink } from "@/shared/components/action-link";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -31,7 +31,6 @@ type Lot = {
 
 const lotSchema = z.object({
   ingredientId: z.string().min(1, "Pilih bahan"),
-  lotCode: z.string().min(3),
   quantity: z.coerce.number().positive(),
   expiryDate: z.string().min(4),
   storageType: z.string().min(2),
@@ -53,7 +52,6 @@ export function IngredientsContainer() {
     resolver: zodResolver(lotSchema),
     defaultValues: {
       ingredientId: "",
-      lotCode: "",
       quantity: 0,
       expiryDate: "",
       storageType: "Chiller 0-4°C",
@@ -65,7 +63,7 @@ export function IngredientsContainer() {
     mutationFn: (values: z.infer<typeof lotSchema>) =>
       apiFetch("/api/ingredients/lots", { method: "POST", body: JSON.stringify(values) }),
     onSuccess: () => {
-      toast.success("Lot diterima. Waktu received_at diambil dari server.");
+      toast.success("Lot diterima. Kode lot digenerate otomatis.");
       queryClient.invalidateQueries({ queryKey: ["lots"] });
       queryClient.invalidateQueries({ queryKey: ["ingredients"] });
       setOpen(false);
@@ -80,14 +78,13 @@ export function IngredientsContainer() {
     <div>
       <PageHeader
         title="Bahan baku & lot"
-        description="Daftar lot dengan expiry dan penyimpanan. Lot yang paling cepat kedaluwarsa ditampilkan lebih dulu (FEFO)."
         action={<Button onClick={() => setOpen(true)}>Catat lot baru</Button>}
       />
       <QueryState isLoading={lots.isLoading} error={lots.error} onRetry={() => lots.refetch()}>
         {rows.length === 0 ? (
           <EmptyState
             title="Belum ada lot"
-            description="Catat penerimaan bahan pertama agar menu dan produksi bisa memakai stok nyata."
+            description="Catat penerimaan bahan pertama."
             actionLabel="Catat lot"
             onAction={() => setOpen(true)}
           />
@@ -111,9 +108,9 @@ export function IngredientsContainer() {
                     return (
                       <TableRow key={lot.id}>
                         <TableCell>
-                          <Link className="font-medium text-primary" href={`/ingredients/${lot.ingredient.id}`}>
+                          <ActionLink href={`/ingredients/${lot.ingredient.id}`} size="xs">
                             {lot.ingredient.name}
-                          </Link>
+                          </ActionLink>
                           <p className="text-xs text-muted-foreground">{lot.ingredient.category}</p>
                         </TableCell>
                         <TableCell>{lot.lotCode}</TableCell>
@@ -162,17 +159,13 @@ export function IngredientsContainer() {
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1">
-                    <Label>Kode lot</Label>
-                    <Input {...form.register("lotCode")} />
-                  </div>
-                  <div className="space-y-1">
                     <Label>Jumlah</Label>
                     <Input type="number" step="0.1" {...form.register("quantity")} />
                   </div>
-                </div>
-                <div className="space-y-1">
-                  <Label>Tanggal kedaluwarsa</Label>
-                  <Input type="date" {...form.register("expiryDate")} />
+                  <div className="space-y-1">
+                    <Label>Tanggal kedaluwarsa</Label>
+                    <Input type="date" {...form.register("expiryDate")} />
+                  </div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1">
@@ -184,7 +177,7 @@ export function IngredientsContainer() {
                     <Input {...form.register("supplier")} />
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">received_at diisi otomatis oleh server saat lot disimpan.</p>
+                <p className="text-xs text-muted-foreground">Kode lot digenerate otomatis saat disimpan.</p>
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                     Batal

@@ -186,3 +186,14 @@
     @apply font-sans;
   }
 }
+
+.auth-fade {
+  transition: opacity 280ms ease;
+  will-change: opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-fade {
+    transition: none;
+  }
+}

@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/api";
 import { PageHeader, QueryState, EmptyState } from "@/shared/components/page-header";
+import { ActionLink } from "@/shared/components/action-link";
 import { ProductionBadge, SafetyBadge } from "@/shared/components/status-badges";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
@@ -47,10 +47,7 @@ export function BatchesContainer() {
 
   return (
     <div>
-      <PageHeader
-        title="Daftar batch"
-        description="Riwayat production batch harus bisa dibuka sebelum melihat countdown dan alokasi sekolah."
-      />
+      <PageHeader title="Daftar batch" />
       <div className="mb-4 flex flex-wrap gap-2">
         {FILTERS.map((item) => (
           <Button key={item.id} variant={filter === item.id ? "default" : "outline"} onClick={() => setFilter(item.id)}>
@@ -73,9 +70,7 @@ export function BatchesContainer() {
                   <div className="flex items-center gap-2">
                     <ProductionBadge status={batch.productionStatus} />
                     <SafetyBadge status={batch.safetyStatus} />
-                    <Link className="text-sm font-medium text-primary" href={`/batches/${batch.id}`}>
-                      Detail & countdown
-                    </Link>
+                    <ActionLink href={`/batches/${batch.id}`}>Detail</ActionLink>
                   </div>
                 </CardContent>
               </Card>

@@ -8,11 +8,12 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { apiFetch } from "@/shared/lib/api";
+import { menuCoverUrl } from "@/shared/lib/menu-cover";
 import { PageHeader, EmptyState } from "@/shared/components/page-header";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Card, CardContent } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 
 const schema = z.object({
@@ -54,17 +55,14 @@ export function AiMenuContainer() {
     },
     onSuccess: (payload) => {
       setResult(payload.data);
-      toast.success("Peringkat menu siap. Batas aman konsumsi tidak dihitung oleh AI.");
+      toast.success("Peringkat menu siap.");
     },
     onError: (error) => toast.error(error.message),
   });
 
   return (
     <div>
-      <PageHeader
-        title="Rekomendasi menu"
-        description="AI/katalog hanya merangking menu, resep, dan kebutuhan bahan. Angka safe window tetap dari ruleset tervalidasi, bukan dari model."
-      />
+      <PageHeader title="Rekomendasi menu" />
       <Card className="mb-6">
         <CardContent className="pt-4">
           <form className="grid gap-4 md:grid-cols-[1fr_160px_auto]" onSubmit={form.handleSubmit((v) => generate.mutate(v))}>
@@ -86,48 +84,34 @@ export function AiMenuContainer() {
       </Card>
 
       {!result ? (
-        <EmptyState
-          title="Belum ada rekomendasi"
-          description="Masukkan bahan utama dan target porsi, lalu sistem merangking menu dari katalog + stok lot."
-        />
+        <EmptyState title="Belum ada rekomendasi" description="Isi bahan dan target porsi." />
       ) : (
-        <div className="space-y-4">
-          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-950">{result.note}</p>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
           {result.items.map((item, index) => (
-            <Card key={item.menuId}>
-              <CardHeader className="flex flex-row items-start justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">Peringkat {index + 1}</p>
-                  <CardTitle>{item.name}</CardTitle>
+            <Link key={item.menuId} href={`/menus/${item.menuId}`} className="group block">
+              <Card className="overflow-hidden py-0 transition-shadow group-hover:shadow-md">
+                <div className="relative aspect-[5/3] overflow-hidden bg-muted">
+                  <img
+                    src={menuCoverUrl(item.name)}
+                    alt={item.name}
+                    className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-2.5 pb-2 pt-8">
+                    <p className="text-[10px] text-white/75">#{index + 1}</p>
+                    <p className="line-clamp-2 text-xs font-semibold leading-snug text-white">{item.name}</p>
+                  </div>
+                  <div className="absolute top-2 right-2">
+                    {item.score > 65 ? (
+                      <Badge className="h-5 px-1.5 text-[10px]">{item.score}</Badge>
+                    ) : (
+                      <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">
+                        {item.score}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
-                {
-                  item.score > 65 ? (
-                    <Badge>Skor {item.score}</Badge>
-                  ) : (
-                    <Badge variant="destructive">Skor {item.score}</Badge>
-                  )
-                }
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm">{item.durabilityNote}</p>
-                {/* <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-                  {item.rationale.map((line) => (
-                    <li key={line}>{line}</li>
-                  ))}
-                </ul> */}
-                {/* <div className="text-sm">
-                  {item.needs.map((need) => (
-                    <p key={need.name}>
-                      {need.name}: butuh {need.required} {need.unit}, stok {need.available}
-                      {need.shortage > 0 ? ` (kurang ${need.shortage})` : ""}
-                    </p>
-                  ))}
-                </div> */}
-                <Link className="text-sm font-medium text-primary" href={`/menus/${item.menuId}`}>
-                  Lihat resep & buat production batch
-                </Link>
-              </CardContent>
-            </Card>
+              </Card>
+            </Link>
           ))}
         </div>
       )}

@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/shared/lib/api";
 import { PageHeader, QueryState } from "@/shared/components/page-header";
+import { ActionLink } from "@/shared/components/action-link";
 import { Countdown } from "@/shared/components/countdown";
 import { DeliveryBadge, SafetyBadge } from "@/shared/components/status-badges";
 import { Button } from "@/shared/components/ui/button";
@@ -71,10 +71,7 @@ export function DistributionDetailContainer() {
 
   return (
     <div>
-      <PageHeader
-        title={row?.allocation.school.name ?? "Detail distribusi"}
-        description="Delivery status, production status, dan safety status adalah tiga hal berbeda."
-      />
+      <PageHeader title={row?.allocation.school.name ?? "Detail distribusi"} />
       <QueryState isLoading={query.isLoading} error={query.error} onRetry={() => query.refetch()}>
         {row ? (
           <div className="space-y-4">
@@ -91,7 +88,9 @@ export function DistributionDetailContainer() {
                 <p>Siap {formatDateTime(row.readyAt)} · Berangkat {formatDateTime(row.departedAt)} · Diterima {formatDateTime(row.receivedAt)}</p>
               </CardContent>
             </Card>
-            <Countdown safeUntil={row.allocation.batch.safeUntil} serverNow={query.data!.serverNow} />
+            <div className="flex justify-center sm:justify-start">
+              <Countdown safeUntil={row.allocation.batch.safeUntil} serverNow={query.data!.serverNow} />
+            </div>
             <div className="flex flex-wrap gap-2">
               <Button disabled={row.status !== "READY" || start.isPending} onClick={() => start.mutate()}>
                 Berangkatkan
@@ -103,12 +102,8 @@ export function DistributionDetailContainer() {
               >
                 Tandai diterima sekolah
               </Button>
-              <Link className="text-sm font-medium text-primary" href={`/labels/${row.id}`}>
-                Label QR
-              </Link>
-              <Link className="text-sm font-medium text-primary" href={`/batches/${row.allocation.batch.id}`}>
-                Production batch
-              </Link>
+              <ActionLink href={`/labels/${row.id}`}>Label QR</ActionLink>
+              <ActionLink href={`/batches/${row.allocation.batch.id}`}>Batch</ActionLink>
             </div>
           </div>
         ) : null}

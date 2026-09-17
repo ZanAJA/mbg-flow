@@ -35,10 +35,7 @@ export function IngredientDetailContainer() {
 
   return (
     <div>
-      <PageHeader
-        title={data?.name ?? "Detail bahan"}
-        description={data ? `${data.category} · satuan ${data.unit}` : "Memuat lot dan expiry."}
-      />
+      <PageHeader title={data?.name ?? "Detail bahan"} />
       <QueryState isLoading={query.isLoading} error={query.error} onRetry={() => query.refetch()}>
         {data ? (
           <Card>

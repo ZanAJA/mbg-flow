@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { prisma } from "@/shared/db/prisma";
+import { nextLotCode } from "@/shared/domain/lots";
 import { handleApiError, jsonOk, requireUser, writeAudit } from "@/shared/lib/http";
 
 const lotSchema = z.object({
   ingredientId: z.string().min(1),
-  lotCode: z.string().min(2),
   quantity: z.number().positive(),
   expiryDate: z.string().min(4),
   storageType: z.string().min(2),
@@ -29,10 +29,11 @@ export async function POST(request: Request) {
     const user = await requireUser(["SUPERVISOR", "KITCHEN"]);
     const body = lotSchema.parse(await request.json());
     const receivedAt = new Date();
+    const lotCode = await nextLotCode(body.ingredientId, receivedAt);
     const lot = await prisma.ingredientLot.create({
       data: {
         ingredientId: body.ingredientId,
-        lotCode: body.lotCode,
+        lotCode,
         quantity: body.quantity,
         expiryDate: new Date(body.expiryDate),
         receivedAt,

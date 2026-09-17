@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -19,6 +20,14 @@ import {
 import { apiFetch } from "@/shared/lib/api";
 import type { Role, SessionShape } from "@/shared/components/session-types";
 import { Button } from "@/shared/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/shared/components/ui/sheet";
 import { cn } from "@/shared/lib/utils";
 import { ROLE_LABEL } from "@/shared/auth/rbac";
@@ -77,6 +86,8 @@ function NavLinks({
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const isPublic = pathname === "/" || pathname === "/login" || pathname.startsWith("/q/");
 
   const me = useQuery({
@@ -90,11 +101,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const user = me.data?.data;
 
-  async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
+  async function confirmLogout() {
+    setLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      setLogoutOpen(false);
+      router.push("/login");
+      router.refresh();
+    } finally {
+      setLoggingOut(false);
+    }
   }
+
+  const logoutButton = (
+    <Button
+      variant="ghost"
+      className="mt-2 w-full justify-start text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+      onClick={() => setLogoutOpen(true)}
+    >
+      <LogOut className="size-4" />
+      Keluar
+    </Button>
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -114,10 +142,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <>
               <p className="px-2 text-sm font-medium">{user.name}</p>
               <p className="px-2 text-xs text-muted-foreground">{ROLE_LABEL[user.role]}</p>
-              <Button variant="ghost" className="mt-2 w-full justify-start" onClick={logout}>
-                <LogOut className="size-4" />
-                Keluar
-              </Button>
+              {logoutButton}
             </>
           ) : null}
         </div>
@@ -140,7 +165,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {user ? (
                 <div className="px-2">
                   <NavLinks role={user.role} pathname={pathname} />
-                  <Button variant="ghost" className="mt-4 w-full justify-start" onClick={logout}>
+                  <Button
+                    variant="ghost"
+                    className="mt-4 w-full justify-start text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => setLogoutOpen(true)}
+                  >
                     <LogOut className="size-4" />
                     Keluar
                   </Button>
@@ -151,6 +180,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </header>
         <main className="px-4 py-6 md:px-8">{children}</main>
       </div>
+
+      <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Keluar dari akun?</DialogTitle>
+            <DialogDescription>
+              Sesi Anda akan diakhiri. Masuk kembali untuk melanjutkan kerja di MBG Dapur.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLogoutOpen(false)} disabled={loggingOut}>
+              Batal
+            </Button>
+            <Button variant="destructive" onClick={confirmLogout} disabled={loggingOut}>
+              {loggingOut ? "Keluar..." : "Ya, keluar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

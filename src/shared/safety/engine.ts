@@ -63,7 +63,7 @@ export function deriveSafetyStatus(
 }
 
 export function formatRemaining(ms: number | null) {
-  if (ms === null) return "Menunggu komponen pangan selesai";
+  if (ms === null) return "--:--:--";
   const sign = ms < 0 ? "-" : "";
   const abs = Math.abs(ms);
   const hours = Math.floor(abs / 3_600_000);

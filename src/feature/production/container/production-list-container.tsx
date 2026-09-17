@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { apiFetch } from "@/shared/lib/api";
 import { PageHeader, QueryState, EmptyState } from "@/shared/components/page-header";
+import { ActionLink } from "@/shared/components/action-link";
 import { ProductionBadge, SafetyBadge } from "@/shared/components/status-badges";
-import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 
@@ -31,7 +31,6 @@ export function ProductionListContainer() {
     <div>
       <PageHeader
         title="Production batch"
-        description="Batch masak porsi besar/kecil. Komponen dipantau secara paralel, bukan antrean berurutan."
         action={<Button onClick={() => router.push("/ai-menu")}>Pilih menu</Button>}
       />
       <QueryState isLoading={query.isLoading} error={query.error} onRetry={() => query.refetch()}>
@@ -54,9 +53,7 @@ export function ProductionListContainer() {
                   <div className="flex items-center gap-2">
                     <ProductionBadge status={batch.productionStatus} />
                     <SafetyBadge status={batch.safetyStatus} />
-                    <Link className="text-sm font-medium text-primary" href={`/production/${batch.id}`}>
-                      Lacak komponen
-                    </Link>
+                    <ActionLink href={`/production/${batch.id}`}>Lacak</ActionLink>
                   </div>
                 </CardContent>
               </Card>

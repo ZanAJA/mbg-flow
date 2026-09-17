@@ -1,13 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/api";
 import { PageHeader, QueryState } from "@/shared/components/page-header";
 import { Countdown } from "@/shared/components/countdown";
+import { ActionLink } from "@/shared/components/action-link";
 import { DeliveryBadge, ProductionBadge, SafetyBadge } from "@/shared/components/status-badges";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
-import { daysUntil, formatDateTime } from "@/shared/lib/format";
+import { daysUntil } from "@/shared/lib/format";
 import type { Role } from "@/shared/types/enums";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Badge } from "@/shared/components/ui/badge";
@@ -63,50 +63,41 @@ export function DashboardContainer() {
   const canDistribution = role === "SUPERVISOR" || role === "DISTRIBUTOR";
   const besar = data?.productionBatches.find((b) => b.portionType === "BESAR");
   const kecil = data?.productionBatches.find((b) => b.portionType === "KECIL");
-  const todayDayDate = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   return (
     <div>
-      <PageHeader
-        title="Dashboard Operasional Hari Ini"
-        description={todayDayDate}
-      />
+      <PageHeader title="Dashboard Operasional Hari Ini" />
       <QueryState isLoading={query.isLoading} error={query.error} onRetry={() => query.refetch()}>
         {data ? (
           <div className="space-y-6">
             <div className="grid gap-4 lg:grid-cols-2">
               {[besar, kecil].map((batch, index) => (
                 <Card key={batch?.id ?? index}>
-                  <CardHeader>
+                  <CardHeader className="pb-2">
                     <CardTitle>{index === 0 ? "Porsi Besar" : "Porsi Kecil"}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {batch ? (
-                      <div className="space-y-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-semibold">{batch.code}</p>
-                          <ProductionBadge status={batch.productionStatus} />
-                          <SafetyBadge status={batch.safetyStatus} />
+                      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-semibold">{batch.code}</p>
+                            <ProductionBadge status={batch.productionStatus} />
+                            <SafetyBadge status={batch.safetyStatus} />
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {batch.menu.name} · {batch.actualQty}/{batch.targetQty}
+                          </p>
+                          {canProduction ? (
+                            <ActionLink href={`/production/${batch.id}`}>Produksi</ActionLink>
+                          ) : (
+                            <ActionLink href={`/batches/${batch.id}`}>Batch</ActionLink>
+                          )}
                         </div>
-                        <p className="text-sm">{batch.menu.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Target {batch.targetQty} porsi · aktual {batch.actualQty}
-                        </p>
-                        <Countdown safeUntil={batch.safeUntil} serverNow={query.data!.serverNow} />
-                        {canProduction ? (
-                          <Link className="text-sm font-medium text-primary" href={`/production/${batch.id}`}>
-                            Buka pelacakan produksi
-                          </Link>
-                        ) : (
-                          <Link className="text-sm font-medium text-primary" href={`/batches/${batch.id}`}>
-                            Buka detail batch
-                          </Link>
-                        )}
+                        <Countdown size="sm" safeUntil={batch.safeUntil} serverNow={query.data!.serverNow} />
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">
-                        Belum ada production batch {index === 0 ? "porsi besar" : "porsi kecil"} hari ini.
-                      </p>
+                      <p className="text-sm text-muted-foreground">Belum ada batch hari ini.</p>
                     )}
                   </CardContent>
                 </Card>
@@ -119,27 +110,23 @@ export function DashboardContainer() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {data.deliveries.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Belum ada delivery batch. Assign sekolah dari halaman produksi.</p>
+                  <p className="text-sm text-muted-foreground">Belum ada pengiriman.</p>
                 ) : (
                   data.deliveries.map((row) => (
                     <div key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2">
                       <div>
                         <p className="font-medium">{row.allocation.school.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {row.code} · {row.allocation.portionQty} porsi · {row.allocation.batch.code}
+                          {row.code} · {row.allocation.portionQty} porsi
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <DeliveryBadge status={row.deliveryStatus} />
                         <SafetyBadge status={row.safetyStatus} />
                         {canDistribution ? (
-                          <Link className="text-sm text-primary" href={`/distribution/${row.id}`}>
-                            Detail
-                          </Link>
+                          <ActionLink href={`/distribution/${row.id}`}>Detail</ActionLink>
                         ) : (
-                          <Link className="text-sm text-primary" href={`/labels/${row.id}`}>
-                            Label QR
-                          </Link>
+                          <ActionLink href={`/labels/${row.id}`}>Label</ActionLink>
                         )}
                       </div>
                     </div>
@@ -155,37 +142,39 @@ export function DashboardContainer() {
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {data.expiryWarnings.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Tidak ada lot yang kedaluwarsa dalam 3 hari.</p>
+                    <p className="text-sm text-muted-foreground">Tidak ada lot kritis.</p>
                   ) : (
                     <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Bahan</TableHead>
-                            <TableHead>Kode lot</TableHead>
-                            <TableHead>Kedaluwarsa</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {data.expiryWarnings.map((lot, index) => {
-                            const days = daysUntil(lot.expiryDate);
-                            return (
-                              <TableRow key={lot.id}>
-                                <TableCell>
-                                  <Link href={`/ingredients/${lot.ingredient.id}`}>{lot.ingredient.name}</Link>
-                                </TableCell>
-                                <TableCell>{lot.lotCode}</TableCell>
-                                <TableCell>
-                                  {days <= 1 ? (
-                                    <Badge variant="destructive">{days} hari</Badge>
-                                  ) : (
-                                    <Badge variant="secondary">{days} hari</Badge>
-                                  )}
-                                </TableCell>
-                              </TableRow>
-                            )
-                          })}
-                        </TableBody>
-                      </Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Bahan</TableHead>
+                          <TableHead>Kode lot</TableHead>
+                          <TableHead>Sisa</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {data.expiryWarnings.map((lot) => {
+                          const days = daysUntil(lot.expiryDate);
+                          return (
+                            <TableRow key={lot.id}>
+                              <TableCell>
+                                <ActionLink href={`/ingredients/${lot.ingredient.id}`} size="xs">
+                                  {lot.ingredient.name}
+                                </ActionLink>
+                              </TableCell>
+                              <TableCell>{lot.lotCode}</TableCell>
+                              <TableCell>
+                                {days <= 1 ? (
+                                  <Badge variant="destructive">{days} hari</Badge>
+                                ) : (
+                                  <Badge variant="secondary">{days} hari</Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
                   )}
                 </CardContent>
               </Card>
@@ -195,28 +184,29 @@ export function DashboardContainer() {
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {data.deadlineWarnings.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Tidak ada pengiriman yang mendekati atau melewati batas aman.</p>
+                    <p className="text-sm text-muted-foreground">Tidak ada yang mendekati batas.</p>
                   ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Sekolah Tujuan</TableHead>
-                            <TableHead>Kode lot</TableHead>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Sekolah</TableHead>
+                          <TableHead>Kode</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {data.deadlineWarnings.map((row) => (
+                          <TableRow key={row.id}>
+                            <TableCell>
+                              <ActionLink href={`/distribution/${row.id}`} size="xs">
+                                {row.allocation.school.name}
+                              </ActionLink>
+                            </TableCell>
+                            <TableCell>{row.code}</TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {data.deadlineWarnings.map((row) => (
-                              <TableRow key={row.id}>
-                                <TableCell>
-                                  <Link href={`/distribution/${row.allocation.school.id}`}>{row.allocation.school.name}</Link>
-                                </TableCell>
-                                <TableCell>{row.code}</TableCell>
-                              </TableRow>
-                          )
-                          )}
-                        </TableBody>
-                      </Table>
-                    )}
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
                 </CardContent>
               </Card>
             </div>

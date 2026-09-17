@@ -7,6 +7,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { apiFetch } from "@/shared/lib/api";
+import { menuCoverUrl } from "@/shared/lib/menu-cover";
 import { PageHeader, QueryState } from "@/shared/components/page-header";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -44,7 +45,7 @@ export function MenuDetailContainer() {
         body: JSON.stringify({ menuId: params.id, ...values }),
       }),
     onSuccess: (payload) => {
-      toast.success("Production batch dibuat. Timestamp dan kode di-generate server.");
+      toast.success("Production batch dibuat.");
       router.push(`/production/${payload.data.id}`);
     },
     onError: (error) => toast.error(error.message),
@@ -53,17 +54,24 @@ export function MenuDetailContainer() {
 
   return (
     <div>
-      <PageHeader title={menu?.name ?? "Detail menu"} description={menu?.durabilityNote} />
+      <PageHeader title={menu?.name ?? "Detail menu"} />
       <QueryState isLoading={query.isLoading} error={query.error} onRetry={() => query.refetch()}>
         {menu ? (
           <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-            <Card>
+            <Card className="overflow-hidden py-0">
+              <div className="aspect-[2/1] max-h-56 bg-muted">
+                <img
+                  src={menuCoverUrl(menu.name)}
+                  alt={menu.name}
+                  className="size-full object-cover"
+                />
+              </div>
               <CardHeader>
-                <CardTitle>Resep snapshot</CardTitle>
+                <CardTitle>Resep</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <p className="text-sm font-medium">Bahan per 100 porsi</p>
+                  <p className="text-sm font-medium">Bahan /100 porsi</p>
                   <ul className="mt-2 space-y-1 text-sm">
                     {menu.recipe.bahan.map((item) => (
                       <li key={item.name}>
@@ -80,17 +88,11 @@ export function MenuDetailContainer() {
                     ))}
                   </ol>
                 </div>
-                <div>
-                  <p className="text-sm font-medium">Komponen produksi paralel</p>
-                  <p className="text-sm text-muted-foreground">
-                    {menu.components.map((c) => c.name).join(" · ")}
-                  </p>
-                </div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>Buat production batch</CardTitle>
+                <CardTitle>Buat batch</CardTitle>
               </CardHeader>
               <CardContent>
                 <form className="space-y-3" onSubmit={form.handleSubmit((v) => create.mutate(v))}>

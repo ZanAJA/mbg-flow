@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/api";
 import { PageHeader, QueryState } from "@/shared/components/page-header";
+import { ActionLink } from "@/shared/components/action-link";
 import { Countdown } from "@/shared/components/countdown";
 import { DeliveryBadge, ProductionBadge, SafetyBadge } from "@/shared/components/status-badges";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
@@ -48,10 +48,7 @@ export function BatchDetailContainer() {
 
   return (
     <div>
-      <PageHeader
-        title={batch ? batch.code : "Detail batch"}
-        description="Countdown tetap tampil setelah produksi selesai dan setelah sekolah menerima makanan."
-      />
+      <PageHeader title={batch ? batch.code : "Detail batch"} />
       <QueryState isLoading={query.isLoading} error={query.error} onRetry={() => query.refetch()}>
         {batch ? (
           <div className="space-y-4">
@@ -59,9 +56,7 @@ export function BatchDetailContainer() {
               <ProductionBadge status={batch.productionStatus} />
               <SafetyBadge status={batch.safetyStatus} />
               {canProduction ? (
-                <Link className="self-center text-sm font-medium text-primary" href={`/production/${batch.id}`}>
-                  Pelacakan produksi
-                </Link>
+                <ActionLink href={`/production/${batch.id}`}>Produksi</ActionLink>
               ) : null}
             </div>
             <Card>
@@ -90,14 +85,10 @@ export function BatchDetailContainer() {
                     <div className="flex items-center gap-2">
                       {allocation.deliveryBatch ? <DeliveryBadge status={allocation.deliveryBatch.status} /> : null}
                       {allocation.deliveryBatch && canDistribution ? (
-                        <Link className="text-sm text-primary" href={`/distribution/${allocation.deliveryBatch.id}`}>
-                          Distribusi
-                        </Link>
+                        <ActionLink href={`/distribution/${allocation.deliveryBatch.id}`}>Distribusi</ActionLink>
                       ) : null}
                       {allocation.deliveryBatch && !canDistribution ? (
-                        <Link className="text-sm text-primary" href={`/labels/${allocation.deliveryBatch.id}`}>
-                          Label QR
-                        </Link>
+                        <ActionLink href={`/labels/${allocation.deliveryBatch.id}`}>Label</ActionLink>
                       ) : null}
                     </div>
                   </div>

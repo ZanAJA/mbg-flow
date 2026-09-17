@@ -35,7 +35,6 @@ export function LabelContainer() {
     <div>
       <PageHeader
         title="Label sekolah"
-        description="Setiap sekolah mendapat QR berbeda. Token merujuk ke alokasi sekolah, bukan ke seluruh production batch."
         action={
           <Button variant="outline" onClick={() => window.print()}>
             Cetak
