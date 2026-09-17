@@ -7,8 +7,10 @@ import { PageHeader, QueryState } from "@/shared/components/page-header";
 import { Countdown } from "@/shared/components/countdown";
 import { DeliveryBadge, ProductionBadge, SafetyBadge } from "@/shared/components/status-badges";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
-import { formatDateTime } from "@/shared/lib/format";
+import { daysUntil, formatDateTime } from "@/shared/lib/format";
 import type { Role } from "@/shared/types/enums";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
+import { Badge } from "@/shared/components/ui/badge";
 
 type DashboardData = {
   role: Role;
@@ -43,9 +45,9 @@ type DashboardData = {
     lotCode: string;
     expiryDate: string;
     quantity: number;
-    ingredient: { name: string };
+    ingredient: { id: string; name: string };
   }>;
-  deadlineWarnings: Array<{ id: string; code: string; allocation: { school: { name: string } } }>;
+  deadlineWarnings: Array<{ id: string; code: string; allocation: { school: { id: string; name: string } } }>;
 };
 
 export function DashboardContainer() {
@@ -61,12 +63,13 @@ export function DashboardContainer() {
   const canDistribution = role === "SUPERVISOR" || role === "DISTRIBUTOR";
   const besar = data?.productionBatches.find((b) => b.portionType === "BESAR");
   const kecil = data?.productionBatches.find((b) => b.portionType === "KECIL");
+  const todayDayDate = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   return (
     <div>
       <PageHeader
-        title="Dashboard operasional hari ini"
-        description="Status production batch porsi besar/kecil, pengiriman per sekolah, dan peringatan bahan atau deadline. Countdown tidak berhenti setelah makanan diterima."
+        title="Dashboard Operasional Hari Ini"
+        description={todayDayDate}
       />
       <QueryState isLoading={query.isLoading} error={query.error} onRetry={() => query.refetch()}>
         {data ? (
@@ -154,12 +157,35 @@ export function DashboardContainer() {
                   {data.expiryWarnings.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Tidak ada lot yang kedaluwarsa dalam 3 hari.</p>
                   ) : (
-                    data.expiryWarnings.map((lot) => (
-                      <p key={lot.id} className="text-sm">
-                        <span className="font-medium">{lot.ingredient.name}</span> · {lot.lotCode} ·
-                        kedaluwarsa {formatDateTime(lot.expiryDate)}
-                      </p>
-                    ))
+                    <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Bahan</TableHead>
+                            <TableHead>Kode lot</TableHead>
+                            <TableHead>Kedaluwarsa</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {data.expiryWarnings.map((lot, index) => {
+                            const days = daysUntil(lot.expiryDate);
+                            return (
+                              <TableRow key={lot.id}>
+                                <TableCell>
+                                  <Link href={`/ingredients/${lot.ingredient.id}`}>{lot.ingredient.name}</Link>
+                                </TableCell>
+                                <TableCell>{lot.lotCode}</TableCell>
+                                <TableCell>
+                                  {days <= 1 ? (
+                                    <Badge variant="destructive">{days} hari</Badge>
+                                  ) : (
+                                    <Badge variant="secondary">{days} hari</Badge>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
+                        </TableBody>
+                      </Table>
                   )}
                 </CardContent>
               </Card>
@@ -171,12 +197,26 @@ export function DashboardContainer() {
                   {data.deadlineWarnings.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Tidak ada pengiriman yang mendekati atau melewati batas aman.</p>
                   ) : (
-                    data.deadlineWarnings.map((row) => (
-                      <p key={row.id} className="text-sm">
-                        {row.allocation.school.name} · {row.code}
-                      </p>
-                    ))
-                  )}
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Sekolah Tujuan</TableHead>
+                            <TableHead>Kode lot</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {data.deadlineWarnings.map((row) => (
+                              <TableRow key={row.id}>
+                                <TableCell>
+                                  <Link href={`/distribution/${row.allocation.school.id}`}>{row.allocation.school.name}</Link>
+                                </TableCell>
+                                <TableCell>{row.code}</TableCell>
+                              </TableRow>
+                          )
+                          )}
+                        </TableBody>
+                      </Table>
+                    )}
                 </CardContent>
               </Card>
             </div>

@@ -100,23 +100,29 @@ export function AiMenuContainer() {
                   <p className="text-xs text-muted-foreground">Peringkat {index + 1}</p>
                   <CardTitle>{item.name}</CardTitle>
                 </div>
-                <Badge>Skor {item.score}</Badge>
+                {
+                  item.score > 65 ? (
+                    <Badge>Skor {item.score}</Badge>
+                  ) : (
+                    <Badge variant="destructive">Skor {item.score}</Badge>
+                  )
+                }
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-sm">{item.durabilityNote}</p>
-                <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                {/* <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
                   {item.rationale.map((line) => (
                     <li key={line}>{line}</li>
                   ))}
-                </ul>
-                <div className="text-sm">
+                </ul> */}
+                {/* <div className="text-sm">
                   {item.needs.map((need) => (
                     <p key={need.name}>
                       {need.name}: butuh {need.required} {need.unit}, stok {need.available}
                       {need.shortage > 0 ? ` (kurang ${need.shortage})` : ""}
                     </p>
                   ))}
-                </div>
+                </div> */}
                 <Link className="text-sm font-medium text-primary" href={`/menus/${item.menuId}`}>
                   Lihat resep & buat production batch
                 </Link>
