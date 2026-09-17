@@ -159,7 +159,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className="md:pl-64">
+      <div className="min-w-0 md:pl-64">
         <header className="sticky top-0 z-20 flex items-center justify-between border-b bg-background/95 px-4 py-3 backdrop-blur md:hidden">
           <div>
             <p className="text-sm font-semibold">MBG Dapur</p>
@@ -189,7 +189,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </SheetContent>
           </Sheet>
         </header>
-        <main className="px-4 py-6 md:px-8">{children}</main>
+        <main className="min-w-0 px-4 py-6 md:px-8">{children}</main>
       </div>
 
       <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>

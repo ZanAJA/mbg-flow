@@ -32,8 +32,55 @@ export function DeliveryBadge({ status }: { status: DeliveryStatus | string }) {
 }
 
 export function SafetyBadge({ status }: { status: SafetyStatus | string }) {
-  if (status === "SAFE") return <Badge className="bg-emerald-600 text-white">{safetyLabel.SAFE}</Badge>;
-  if (status === "WARNING") return <Badge className="bg-amber-500 text-white">{safetyLabel.WARNING}</Badge>;
+  if (status === "SAFE") {
+    return (
+      <Badge className="border-transparent bg-emerald-600/15 text-emerald-700 hover:bg-emerald-600/15 dark:text-emerald-300">
+        {safetyLabel.SAFE}
+      </Badge>
+    );
+  }
+  if (status === "WARNING") {
+    return (
+      <Badge className="border-transparent bg-amber-500/15 text-amber-800 hover:bg-amber-500/15 dark:text-amber-300">
+        {safetyLabel.WARNING}
+      </Badge>
+    );
+  }
   if (status === "PAST_LIMIT") return <Badge variant="destructive">{safetyLabel.PAST_LIMIT}</Badge>;
   return <Badge variant="secondary">{safetyLabel.PENDING}</Badge>;
+}
+
+/** FEFO remaining-days badge: merah ≤2, kuning 3–5, hijau >5. */
+export function FefoBadge({
+  days,
+  isTop,
+  showDays = false,
+}: {
+  days: number;
+  isTop?: boolean;
+  /** When true, show remaining days count (dashboard "Sisa"). */
+  showDays?: boolean;
+}) {
+  if (days <= 2) {
+    return <Badge variant="destructive">{showDays ? `${days} hari` : "Segera pakai"}</Badge>;
+  }
+  if (days <= 5) {
+    return (
+      <Badge className="border-transparent bg-amber-500/15 text-amber-800 hover:bg-amber-500/15 dark:text-amber-300">
+        {showDays ? `${days} hari` : "Mendekati"}
+      </Badge>
+    );
+  }
+  if (isTop && !showDays) {
+    return (
+      <Badge className="border-transparent bg-emerald-600 text-white hover:bg-emerald-600">
+        Prioritas FEFO
+      </Badge>
+    );
+  }
+  return (
+    <Badge className="border-transparent bg-emerald-600/15 text-emerald-700 hover:bg-emerald-600/15 dark:text-emerald-300">
+      {showDays ? `${days} hari` : "Aman"}
+    </Badge>
+  );
 }

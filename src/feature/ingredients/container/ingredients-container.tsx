@@ -16,7 +16,6 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
-import { Badge } from "@/shared/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -24,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
+import { FefoBadge } from "@/shared/components/status-badges";
 import { daysUntil, formatDate } from "@/shared/lib/format";
 
 type Lot = {
@@ -47,6 +47,9 @@ const lotSchema = z.object({
 });
 
 type FefoFilter = "all" | "urgent" | "soon" | "ok";
+
+const filterFieldClass = "min-w-0 space-y-1";
+const selectTriggerClass = "w-full min-w-0 overflow-hidden [&>span]:min-w-0 [&>span]:truncate";
 
 export function IngredientsContainer() {
   const router = useRouter();
@@ -126,7 +129,7 @@ export function IngredientsContainer() {
   }
 
   return (
-    <div>
+    <div className="min-w-0">
       <PageHeader
         title="Bahan baku & lot"
         action={<Button onClick={() => setOpen(true)}>Catat lot baru</Button>}
@@ -134,23 +137,24 @@ export function IngredientsContainer() {
 
       {rows.length > 0 ? (
         <Card className="mb-4">
-          <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="space-y-1">
+          <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className={filterFieldClass}>
               <Label htmlFor="lot-search">Cari</Label>
               <Input
                 id="lot-search"
+                className="min-w-0"
                 placeholder="Nama bahan, kode lot, pemasok"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <div className="space-y-1">
+            <div className={filterFieldClass}>
               <Label>Kategori</Label>
               <Select
                 value={category || "__all__"}
                 onValueChange={(value) => setCategory(value === "__all__" ? "" : value)}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className={selectTriggerClass}>
                   <SelectValue placeholder="Semua kategori" />
                 </SelectTrigger>
                 <SelectContent>
@@ -163,13 +167,13 @@ export function IngredientsContainer() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
+            <div className={filterFieldClass}>
               <Label>Penyimpanan</Label>
               <Select
                 value={storage || "__all__"}
                 onValueChange={(value) => setStorage(value === "__all__" ? "" : value)}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className={selectTriggerClass}>
                   <SelectValue placeholder="Semua penyimpanan" />
                 </SelectTrigger>
                 <SelectContent>
@@ -182,10 +186,10 @@ export function IngredientsContainer() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
+            <div className={filterFieldClass}>
               <Label>Status FEFO</Label>
               <Select value={fefo} onValueChange={(value) => setFefo(value as FefoFilter)}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className={selectTriggerClass}>
                   <SelectValue placeholder="Semua status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -270,13 +274,7 @@ export function IngredientsContainer() {
                         <TableCell>{formatDate(lot.expiryDate)}</TableCell>
                         <TableCell>{lot.storageType}</TableCell>
                         <TableCell>
-                          {days <= 2 ? (
-                            <Badge variant="destructive">Segera pakai</Badge>
-                          ) : isTopFefo ? (
-                            <Badge>Prioritas FEFO</Badge>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">{days} hari</span>
-                          )}
+                          <FefoBadge days={days} isTop={isTopFefo} />
                         </TableCell>
                         <TableCell
                           onClick={(event) => event.stopPropagation()}

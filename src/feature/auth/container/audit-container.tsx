@@ -210,22 +210,22 @@ export function AuditContainer() {
   }
 
   return (
-    <div>
+    <div className="min-w-0">
       <PageHeader title="Audit log" />
       <Card className="mb-4">
-        <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-          <div className="space-y-1">
+        <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="min-w-0 space-y-1">
             <Label htmlFor="audit-from">Dari tanggal</Label>
             <DatePicker id="audit-from" value={dateFrom} onChange={setDateFrom} placeholder="Dari tanggal" />
           </div>
-          <div className="space-y-1">
+          <div className="min-w-0 space-y-1">
             <Label htmlFor="audit-to">Sampai tanggal</Label>
             <DatePicker id="audit-to" value={dateTo} onChange={setDateTo} placeholder="Sampai tanggal" />
           </div>
-          <div className="space-y-1">
+          <div className="min-w-0 space-y-1">
             <Label>Kegiatan</Label>
             <Select value={action || "__all__"} onValueChange={(value) => setAction(value === "__all__" ? "" : value)}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full min-w-0 overflow-hidden [&>span]:min-w-0 [&>span]:truncate">
                 <SelectValue placeholder="Semua kegiatan" />
               </SelectTrigger>
               <SelectContent>
@@ -238,13 +238,13 @@ export function AuditContainer() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1">
+          <div className="min-w-0 space-y-1">
             <Label>Entitas</Label>
             <Select
               value={entityType || "__all__"}
               onValueChange={(value) => setEntityType(value === "__all__" ? "" : value)}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full min-w-0 overflow-hidden [&>span]:min-w-0 [&>span]:truncate">
                 <SelectValue placeholder="Semua entitas" />
               </SelectTrigger>
               <SelectContent>
@@ -257,10 +257,11 @@ export function AuditContainer() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1">
+          <div className="min-w-0 space-y-1">
             <Label htmlFor="audit-actor">Pelaku</Label>
             <Input
               id="audit-actor"
+              className="min-w-0"
               placeholder="Nama pengguna"
               value={actorQuery}
               onChange={(e) => setActorQuery(e.target.value)}

@@ -7,7 +7,7 @@ import { apiFetch } from "@/shared/lib/api";
 import { PageHeader, QueryState } from "@/shared/components/page-header";
 import { ActionLink } from "@/shared/components/action-link";
 import { Countdown } from "@/shared/components/countdown";
-import { DeliveryBadge, SafetyBadge } from "@/shared/components/status-badges";
+import { DeliveryBadge } from "@/shared/components/status-badges";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { formatDateTime } from "@/shared/lib/format";
@@ -34,6 +34,15 @@ type Delivery = {
     };
   };
 };
+
+function MetaRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid grid-cols-[7.5rem_1fr] gap-2 text-sm sm:grid-cols-[9rem_1fr]">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 font-medium break-words">{value}</dd>
+    </div>
+  );
+}
 
 export function DistributionDetailContainer() {
   const params = useParams<{ id: string }>();
@@ -70,40 +79,54 @@ export function DistributionDetailContainer() {
   const row = query.data?.data;
 
   return (
-    <div>
-      <PageHeader title={row?.allocation.school.name ?? "Detail distribusi"} />
+    <div className="min-w-0">
+      <PageHeader
+        title={row?.allocation.school.name ?? "Detail distribusi"}
+        action={row ? <DeliveryBadge status={row.deliveryStatus} /> : undefined}
+      />
       <QueryState isLoading={query.isLoading} error={query.error} onRetry={() => query.refetch()}>
         {row ? (
           <div className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              <DeliveryBadge status={row.deliveryStatus} />
-              <SafetyBadge status={row.safetyStatus} />
-            </div>
             <Card>
-              <CardContent className="space-y-2 text-sm">
-                <p>{row.code} · {row.allocation.portionQty} porsi</p>
-                <p>{row.allocation.school.address}</p>
-                <p>Jarak {row.allocation.school.distanceKm} km · ETA {row.etaMinutes ?? "—"} menit</p>
-                <p>Menu {row.allocation.batch.menu.name} dari {row.allocation.batch.sppg.name}</p>
-                <p>Siap {formatDateTime(row.readyAt)} · Berangkat {formatDateTime(row.departedAt)} · Diterima {formatDateTime(row.receivedAt)}</p>
+              <CardContent>
+                <dl className="space-y-2.5">
+                  <MetaRow label="Kode kirim" value={`${row.code} · ${row.allocation.portionQty} porsi`} />
+                  <MetaRow label="Alamat" value={row.allocation.school.address} />
+                  <MetaRow
+                    label="Jarak / ETA"
+                    value={`${row.allocation.school.distanceKm} km · ${row.etaMinutes ?? "—"} menit`}
+                  />
+                  <MetaRow
+                    label="Menu"
+                    value={`${row.allocation.batch.menu.name} · ${row.allocation.batch.sppg.name}`}
+                  />
+                  <MetaRow label="Siap" value={formatDateTime(row.readyAt)} />
+                  <MetaRow label="Berangkat" value={formatDateTime(row.departedAt)} />
+                  <MetaRow label="Diterima" value={formatDateTime(row.receivedAt)} />
+                </dl>
               </CardContent>
             </Card>
-            <div className="flex justify-center sm:justify-start">
+
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <Countdown safeUntil={row.allocation.batch.safeUntil} serverNow={query.data!.serverNow} />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button disabled={row.status !== "READY" || start.isPending} onClick={() => start.mutate()}>
-                Berangkatkan
-              </Button>
-              <Button
-                variant="outline"
-                disabled={row.status !== "IN_DELIVERY" || receive.isPending}
-                onClick={() => receive.mutate()}
-              >
-                Tandai diterima sekolah
-              </Button>
-              <ActionLink href={`/labels/${row.id}`} label="Label QR" />
-              <ActionLink href={`/batches/${row.allocation.batch.id}`} label="Batch" />
+              <div className="flex flex-wrap items-center gap-2">
+                <Button disabled={row.status !== "READY" || start.isPending} onClick={() => start.mutate()}>
+                  Berangkatkan
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={row.status !== "IN_DELIVERY" || receive.isPending}
+                  onClick={() => receive.mutate()}
+                >
+                  Tandai diterima
+                </Button>
+                <ActionLink href={`/labels/${row.id}`} variant="text">
+                  Label QR
+                </ActionLink>
+                <ActionLink href={`/batches/${row.allocation.batch.id}`} variant="text">
+                  Batch
+                </ActionLink>
+              </div>
             </div>
           </div>
         ) : null}

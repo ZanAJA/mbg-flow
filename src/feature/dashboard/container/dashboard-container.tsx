@@ -7,12 +7,11 @@ import { apiFetch } from "@/shared/lib/api";
 import { PageHeader, QueryState } from "@/shared/components/page-header";
 import { Countdown } from "@/shared/components/countdown";
 import { ActionLink } from "@/shared/components/action-link";
-import { DeliveryBadge, ProductionBadge, SafetyBadge } from "@/shared/components/status-badges";
+import { DeliveryBadge, FefoBadge, ProductionBadge, SafetyBadge } from "@/shared/components/status-badges";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { daysUntil } from "@/shared/lib/format";
 import type { Role } from "@/shared/types/enums";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
-import { Badge } from "@/shared/components/ui/badge";
 
 type DashboardData = {
   role: Role;
@@ -198,11 +197,7 @@ export function DashboardContainer() {
                               </TableCell>
                               <TableCell>{lot.lotCode}</TableCell>
                               <TableCell>
-                                {days <= 1 ? (
-                                  <Badge variant="destructive">{days} hari</Badge>
-                                ) : (
-                                  <Badge variant="secondary">{days} hari</Badge>
-                                )}
+                                <FefoBadge days={days} showDays />
                               </TableCell>
                             </TableRow>
                           );
