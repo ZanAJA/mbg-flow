@@ -23,10 +23,17 @@ export async function GET(
     });
     if (!delivery) throw new HttpError(404, "Delivery batch tidak ditemukan.");
 
-    const origin = new URL(request.url).origin;
+    const configuredOrigin = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL)?.replace(
+      /\/$/,
+      "",
+    );
+    const origin = configuredOrigin || new URL(request.url).origin;
     const publicUrl = `${origin}/q/${delivery.qrToken}`;
     const qrDataUrl = await QRCode.toDataURL(publicUrl, { margin: 1, width: 280 });
-    const snapshot = JSON.parse(delivery.allocation.batch.menuSnapshot) as { name?: string };
+    const snapshot = JSON.parse(delivery.allocation.batch.menuSnapshot) as {
+      name?: string;
+      durabilityNote?: string;
+    };
 
     return jsonOk({
       publicUrl,
@@ -40,6 +47,7 @@ export async function GET(
       deliveryCode: delivery.code,
       safeUntil: delivery.allocation.batch.safeUntil,
       safetyStatus: deriveSafetyStatus(delivery.allocation.batch.safeUntil, new Date()),
+      durabilityNote: snapshot.durabilityNote ?? delivery.allocation.batch.menu.durabilityNote,
     });
   } catch (error) {
     return handleApiError(error);

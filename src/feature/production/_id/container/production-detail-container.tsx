@@ -11,6 +11,13 @@ import { Countdown } from "@/shared/components/countdown";
 import { DeliveryBadge, ProductionBadge, SafetyBadge } from "@/shared/components/status-badges";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { formatDateTime, toLocalDatetimeValue } from "@/shared/lib/format";
 import { useQuery as useMe } from "@tanstack/react-query";
@@ -152,7 +159,7 @@ export function ProductionDetailContainer() {
             <div className="grid gap-3">
               {batch.components.map((component) => (
                 <Card key={component.id}>
-                  <CardContent className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                  <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="font-medium">{component.name}</p>
                       <p className="text-xs text-muted-foreground">
@@ -209,14 +216,18 @@ export function ProductionDetailContainer() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-3 md:grid-cols-[1fr_140px_auto]">
-                  <select className="h-8 rounded-lg border px-2 text-sm" value={schoolId} onChange={(e) => setSchoolId(e.target.value)}>
-                    <option value="">Pilih sekolah</option>
-                    {(schools.data?.data ?? []).map((school) => (
-                      <option key={school.id} value={school.id}>
-                        {school.name}
-                      </option>
-                    ))}
-                  </select>
+                  <Select value={schoolId || undefined} onValueChange={setSchoolId}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Pilih sekolah" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(schools.data?.data ?? []).map((school) => (
+                        <SelectItem key={school.id} value={school.id}>
+                          {school.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Input type="number" value={portionQty} onChange={(e) => setPortionQty(Number(e.target.value))} />
                   <Button onClick={() => allocate.mutate()} disabled={!schoolId || allocate.isPending}>
                     Buat alokasi
@@ -234,7 +245,7 @@ export function ProductionDetailContainer() {
                       {allocation.deliveryBatch ? (
                         <div className="flex items-center gap-2">
                           <DeliveryBadge status={allocation.deliveryBatch.status} />
-                          <ActionLink href={`/labels/${allocation.deliveryBatch.id}`}>Label</ActionLink>
+                          <ActionLink href={`/labels/${allocation.deliveryBatch.id}`} label="Label" />
                         </div>
                       ) : null}
                     </div>

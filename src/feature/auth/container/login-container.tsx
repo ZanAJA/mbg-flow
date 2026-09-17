@@ -1,14 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useSearchParams } from "next/navigation";
+import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import { cn } from "@/shared/lib/utils";
 import { ROLE_LABEL } from "@/shared/auth/rbac";
 import { ROLES, type Role } from "@/shared/types/enums";
@@ -52,7 +60,7 @@ function safeNextPath(value: string | null) {
 }
 
 export function LoginContainer() {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const next = safeNextPath(useSearchParams().get("next"));
   const [mode, setMode] = useState<AuthMode>("login");
   const [opaque, setOpaque] = useState(true);
@@ -78,6 +86,7 @@ export function LoginContainer() {
   async function onLogin(values: LoginValues) {
     const response = await fetch("/api/auth/login", {
       method: "POST",
+      credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(values),
     });
@@ -86,13 +95,14 @@ export function LoginContainer() {
       toast.error(body?.error ?? "Gagal masuk");
       return;
     }
-    router.push(next);
-    router.refresh();
+    queryClient.clear();
+    window.location.assign(next);
   }
 
   async function onRegister(values: RegisterValues) {
     const response = await fetch("/api/auth/register", {
       method: "POST",
+      credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: values.name,
@@ -107,8 +117,8 @@ export function LoginContainer() {
       return;
     }
     toast.success("Akun berhasil dibuat");
-    router.push(next);
-    router.refresh();
+    queryClient.clear();
+    window.location.assign(next);
   }
 
   const isRegister = mode === "register";
@@ -255,17 +265,24 @@ export function LoginContainer() {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="register-role">Peran</Label>
-                  <select
-                    id="register-role"
-                    className="h-8 w-full rounded-lg border bg-background px-2 text-sm"
-                    {...registerForm.register("role")}
-                  >
-                    {ROLES.map((role) => (
-                      <option key={role} value={role}>
-                        {ROLE_LABEL[role as Role]}
-                      </option>
-                    ))}
-                  </select>
+                  <Controller
+                    control={registerForm.control}
+                    name="role"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger id="register-role" className="w-full">
+                          <SelectValue placeholder="Pilih peran" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ROLES.map((role) => (
+                            <SelectItem key={role} value={role}>
+                              {ROLE_LABEL[role as Role]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="register-password">Kata sandi</Label>

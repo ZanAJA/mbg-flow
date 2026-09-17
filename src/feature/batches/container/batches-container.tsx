@@ -4,10 +4,9 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/api";
 import { PageHeader, QueryState, EmptyState } from "@/shared/components/page-header";
-import { ActionLink } from "@/shared/components/action-link";
+import { NavCard } from "@/shared/components/action-link";
 import { ProductionBadge, SafetyBadge } from "@/shared/components/status-badges";
 import { Button } from "@/shared/components/ui/button";
-import { Card, CardContent } from "@/shared/components/ui/card";
 
 type Batch = {
   id: string;
@@ -61,19 +60,18 @@ export function BatchesContainer() {
         ) : (
           <div className="space-y-3">
             {rows.map((batch) => (
-              <Card key={batch.id}>
-                <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-4">
-                  <div>
+              <NavCard key={batch.id} href={`/batches/${batch.id}`} label={`Detail ${batch.code}`}>
+                <div className="flex items-center gap-3">
+                  <div className="min-w-0 flex-1">
                     <p className="font-semibold">{batch.code}</p>
                     <p className="text-sm text-muted-foreground">{batch.menu.name}</p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
                     <ProductionBadge status={batch.productionStatus} />
                     <SafetyBadge status={batch.safetyStatus} />
-                    <ActionLink href={`/batches/${batch.id}`}>Detail</ActionLink>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </NavCard>
             ))}
           </div>
         )}

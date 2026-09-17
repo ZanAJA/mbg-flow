@@ -36,12 +36,18 @@ export function serializeDelivery<T extends {
 
 export const PUBLIC_QR_FIELDS = [
   "menuName",
+  "durabilityNote",
   "sppgName",
+  "sppgAddress",
   "schoolName",
+  "schoolAddress",
   "portionQty",
+  "portionType",
   "productionCode",
   "deliveryCode",
   "safeUntil",
+  "createdAt",
+  "departedAt",
   "receivedAt",
   "safetyStatus",
   "productionStatus",

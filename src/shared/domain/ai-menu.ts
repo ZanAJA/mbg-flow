@@ -1,4 +1,5 @@
 import { prisma } from "@/shared/db/prisma";
+import { HttpError } from "@/shared/lib/http";
 import { openai } from "@ai-sdk/openai";
 import { generateText, Output } from "ai";
 import { z } from "zod";
@@ -115,8 +116,14 @@ async function rankMenusWithAi(input: MenuRecommendationInput, candidates: Ranke
     output: Output.object({
       schema: aiRecommendationSchema,
     }),
-    system:
-      "You rank school meal menu candidates for an SPPG kitchen. Only use menuId values from the supplied candidates. Do not invent recipes, safety rules, stock, or deadlines. Safety deadlines are handled by a separate validated rule engine.",
+    system: [
+      "You are the production AI for an Indonesian SPPG school-meal kitchen.",
+      "Rank the supplied menu candidates for today's cook based on stock coverage, FEFO urgency, requested main ingredients, and operational practicality.",
+      "Only use menuId values from the supplied candidates. Never invent recipes, safety rules, stock quantities, or deadlines.",
+      "Safety deadlines (safe_until) are owned by a separate validated rule engine — do not invent them.",
+      "Write note and every rationale bullet in clear Bahasa Indonesia for kitchen supervisors.",
+      "Score 0-100. Prefer menus that use near-expiry lots and cover requested ingredients without large shortages.",
+    ].join(" "),
     prompt: JSON.stringify({
       targetPortions: input.targetPortions,
       requestedIngredients: input.mainIngredients,
@@ -157,19 +164,23 @@ async function rankMenusWithAi(input: MenuRecommendationInput, candidates: Ranke
 }
 
 export async function recommendMenus(input: MenuRecommendationInput) {
-  const catalogSnapshot = await rankMenusFromCatalog(input);
-
-  if (!process.env.OPENAI_API_KEY) {
-    return catalogSnapshot;
+  if (!process.env.OPENAI_API_KEY?.trim()) {
+    throw new HttpError(
+      503,
+      "OPENAI_API_KEY belum dikonfigurasi. Isi kunci OpenAI di file .env untuk memakai rekomendasi AI asli.",
+    );
   }
+
+  const catalogSnapshot = await rankMenusFromCatalog(input);
 
   try {
     return await rankMenusWithAi(input, catalogSnapshot.items);
   } catch (error) {
-    console.error("AI menu recommendation failed; using catalog ranker fallback.", error);
-    return {
-      ...catalogSnapshot,
-      note: `${catalogSnapshot.note} AI structured output unavailable; fallback ranker used.`,
-    };
+    console.error("AI menu recommendation failed.", error);
+    const detail = error instanceof Error ? error.message : "unknown error";
+    throw new HttpError(
+      502,
+      `Rekomendasi AI gagal (${detail}). Periksa OPENAI_API_KEY, model AI_MENU_MODEL, dan kuota OpenAI.`,
+    );
   }
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -10,11 +11,19 @@ import { apiFetch } from "@/shared/lib/api";
 import { PageHeader, QueryState, EmptyState } from "@/shared/components/page-header";
 import { ActionLink } from "@/shared/components/action-link";
 import { Button } from "@/shared/components/ui/button";
+import { DatePicker } from "@/shared/components/ui/date-picker";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Badge } from "@/shared/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import { daysUntil, formatDate } from "@/shared/lib/format";
 
 type Lot = {
@@ -37,9 +46,17 @@ const lotSchema = z.object({
   supplier: z.string().min(2),
 });
 
+type FefoFilter = "all" | "urgent" | "soon" | "ok";
+
 export function IngredientsContainer() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("");
+  const [storage, setStorage] = useState("");
+  const [fefo, setFefo] = useState<FefoFilter>("all");
   const queryClient = useQueryClient();
+
   const lots = useQuery({
     queryKey: ["lots"],
     queryFn: () => apiFetch<Lot[]>("/api/ingredients/lots"),
@@ -74,12 +91,128 @@ export function IngredientsContainer() {
 
   const rows = lots.data?.data ?? [];
 
+  const categoryOptions = useMemo(() => {
+    return Array.from(new Set(rows.map((lot) => lot.ingredient.category))).sort();
+  }, [rows]);
+
+  const storageOptions = useMemo(() => {
+    return Array.from(new Set(rows.map((lot) => lot.storageType))).sort();
+  }, [rows]);
+
+  const filtered = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return rows.filter((lot) => {
+      const days = daysUntil(lot.expiryDate);
+      if (category && lot.ingredient.category !== category) return false;
+      if (storage && lot.storageType !== storage) return false;
+      if (fefo === "urgent" && days > 2) return false;
+      if (fefo === "soon" && (days <= 2 || days > 5)) return false;
+      if (fefo === "ok" && days <= 5) return false;
+      if (needle) {
+        const haystack = `${lot.ingredient.name} ${lot.lotCode} ${lot.supplier}`.toLowerCase();
+        if (!haystack.includes(needle)) return false;
+      }
+      return true;
+    });
+  }, [rows, search, category, storage, fefo]);
+
+  const hasFilters = Boolean(search.trim() || category || storage || fefo !== "all");
+
+  function resetFilters() {
+    setSearch("");
+    setCategory("");
+    setStorage("");
+    setFefo("all");
+  }
+
   return (
     <div>
       <PageHeader
         title="Bahan baku & lot"
         action={<Button onClick={() => setOpen(true)}>Catat lot baru</Button>}
       />
+
+      {rows.length > 0 ? (
+        <Card className="mb-4">
+          <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="space-y-1">
+              <Label htmlFor="lot-search">Cari</Label>
+              <Input
+                id="lot-search"
+                placeholder="Nama bahan, kode lot, pemasok"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Kategori</Label>
+              <Select
+                value={category || "__all__"}
+                onValueChange={(value) => setCategory(value === "__all__" ? "" : value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Semua kategori" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Semua kategori</SelectItem>
+                  {categoryOptions.map((item) => (
+                    <SelectItem key={item} value={item}>
+                      {item}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Penyimpanan</Label>
+              <Select
+                value={storage || "__all__"}
+                onValueChange={(value) => setStorage(value === "__all__" ? "" : value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Semua penyimpanan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Semua penyimpanan</SelectItem>
+                  {storageOptions.map((item) => (
+                    <SelectItem key={item} value={item}>
+                      {item}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Status FEFO</Label>
+              <Select value={fefo} onValueChange={(value) => setFefo(value as FefoFilter)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Semua status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua status</SelectItem>
+                  <SelectItem value="urgent">Segera pakai (max 2 hari)</SelectItem>
+                  <SelectItem value="soon">Mendekati (3-5 hari)</SelectItem>
+                  <SelectItem value="ok">Aman (lebih dari 5 hari)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {rows.length > 0 ? (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+          <p>
+            Menampilkan {filtered.length} dari {rows.length} lot
+          </p>
+          {hasFilters ? (
+            <Button type="button" variant="ghost" size="sm" onClick={resetFilters}>
+              Reset filter
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
       <QueryState isLoading={lots.isLoading} error={lots.error} onRetry={() => lots.refetch()}>
         {rows.length === 0 ? (
           <EmptyState
@@ -88,9 +221,11 @@ export function IngredientsContainer() {
             actionLabel="Catat lot"
             onAction={() => setOpen(true)}
           />
+        ) : filtered.length === 0 ? (
+          <EmptyState title="Tidak ada hasil" description="Ubah pencarian, kategori, penyimpanan, atau status FEFO." />
         ) : (
           <Card>
-            <CardContent className="pt-4">
+            <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -100,17 +235,32 @@ export function IngredientsContainer() {
                     <TableHead>Expiry</TableHead>
                     <TableHead>Penyimpanan</TableHead>
                     <TableHead>FEFO</TableHead>
+                    <TableHead className="w-10">
+                      <span className="sr-only">Buka</span>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rows.map((lot, index) => {
+                  {filtered.map((lot) => {
                     const days = daysUntil(lot.expiryDate);
+                    const href = `/ingredients/${lot.ingredient.id}`;
+                    const isTopFefo = rows[0]?.id === lot.id;
                     return (
-                      <TableRow key={lot.id}>
+                      <TableRow
+                        key={lot.id}
+                        role="button"
+                        tabIndex={0}
+                        className="cursor-pointer"
+                        onClick={() => router.push(href)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            router.push(href);
+                          }
+                        }}
+                      >
                         <TableCell>
-                          <ActionLink href={`/ingredients/${lot.ingredient.id}`} size="xs">
-                            {lot.ingredient.name}
-                          </ActionLink>
+                          <p className="font-medium">{lot.ingredient.name}</p>
                           <p className="text-xs text-muted-foreground">{lot.ingredient.category}</p>
                         </TableCell>
                         <TableCell>{lot.lotCode}</TableCell>
@@ -122,11 +272,17 @@ export function IngredientsContainer() {
                         <TableCell>
                           {days <= 2 ? (
                             <Badge variant="destructive">Segera pakai</Badge>
-                          ) : index === 0 ? (
+                          ) : isTopFefo ? (
                             <Badge>Prioritas FEFO</Badge>
                           ) : (
                             <span className="text-xs text-muted-foreground">{days} hari</span>
                           )}
+                        </TableCell>
+                        <TableCell
+                          onClick={(event) => event.stopPropagation()}
+                          onKeyDown={(event) => event.stopPropagation()}
+                        >
+                          <ActionLink href={href} label={`Detail ${lot.ingredient.name}`} />
                         </TableCell>
                       </TableRow>
                     );
@@ -148,14 +304,24 @@ export function IngredientsContainer() {
               <form className="space-y-3" onSubmit={form.handleSubmit((values) => createLot.mutate(values))}>
                 <div className="space-y-1">
                   <Label>Bahan</Label>
-                  <select className="h-8 w-full rounded-lg border px-2 text-sm" {...form.register("ingredientId")}>
-                    <option value="">Pilih bahan</option>
-                    {(ingredients.data?.data ?? []).map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
+                  <Controller
+                    control={form.control}
+                    name="ingredientId"
+                    render={({ field }) => (
+                      <Select value={field.value || undefined} onValueChange={field.onChange}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Pilih bahan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(ingredients.data?.data ?? []).map((item) => (
+                            <SelectItem key={item.id} value={item.id}>
+                              {item.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1">
@@ -164,7 +330,17 @@ export function IngredientsContainer() {
                   </div>
                   <div className="space-y-1">
                     <Label>Tanggal kedaluwarsa</Label>
-                    <Input type="date" {...form.register("expiryDate")} />
+                    <Controller
+                      control={form.control}
+                      name="expiryDate"
+                      render={({ field }) => (
+                        <DatePicker
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Tanggal kedaluwarsa"
+                        />
+                      )}
+                    />
                   </div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">

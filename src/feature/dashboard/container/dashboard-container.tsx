@@ -1,6 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { apiFetch } from "@/shared/lib/api";
 import { PageHeader, QueryState } from "@/shared/components/page-header";
 import { Countdown } from "@/shared/components/countdown";
@@ -71,37 +73,61 @@ export function DashboardContainer() {
         {data ? (
           <div className="space-y-6">
             <div className="grid gap-4 lg:grid-cols-2">
-              {[besar, kecil].map((batch, index) => (
-                <Card key={batch?.id ?? index}>
-                  <CardHeader className="pb-2">
-                    <CardTitle>{index === 0 ? "Porsi Besar" : "Porsi Kecil"}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {batch ? (
-                      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="font-semibold">{batch.code}</p>
-                            <ProductionBadge status={batch.productionStatus} />
-                            <SafetyBadge status={batch.safetyStatus} />
+              {[besar, kecil].map((batch, index) => {
+                if (!batch) {
+                  return (
+                    <Card key={`empty-${index}`} size="sm">
+                      <CardHeader className="pb-0">
+                        <CardTitle className="text-sm text-muted-foreground">
+                          {index === 0 ? "Porsi Besar" : "Porsi Kecil"}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">Belum ada batch hari ini.</p>
+                      </CardContent>
+                    </Card>
+                  );
+                }
+
+                const href = canProduction ? `/production/${batch.id}` : `/batches/${batch.id}`;
+                return (
+                  <Link
+                    key={batch.id}
+                    href={href}
+                    aria-label={canProduction ? `Produksi ${batch.code}` : `Batch ${batch.code}`}
+                    className="block"
+                  >
+                    <Card size="sm" className="transition-colors hover:bg-muted/40">
+                      <CardHeader className="pb-0">
+                        <CardTitle className="text-sm text-muted-foreground">
+                          {index === 0 ? "Porsi Besar" : "Porsi Kecil"}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-3">
+                          <div className="min-w-0 flex-1 space-y-1.5">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-semibold">{batch.code}</p>
+                              <ProductionBadge status={batch.productionStatus} />
+                              <SafetyBadge status={batch.safetyStatus} />
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {batch.menu.name} · {batch.actualQty}/{batch.targetQty}
+                            </p>
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            {batch.menu.name} · {batch.actualQty}/{batch.targetQty}
-                          </p>
-                          {canProduction ? (
-                            <ActionLink href={`/production/${batch.id}`}>Produksi</ActionLink>
-                          ) : (
-                            <ActionLink href={`/batches/${batch.id}`}>Batch</ActionLink>
-                          )}
+                          <Countdown size="sm" safeUntil={batch.safeUntil} serverNow={query.data!.serverNow} />
+                          <span
+                            className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground"
+                            aria-hidden
+                          >
+                            <ChevronRight className="size-4" />
+                          </span>
                         </div>
-                        <Countdown size="sm" safeUntil={batch.safeUntil} serverNow={query.data!.serverNow} />
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">Belum ada batch hari ini.</p>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
             </div>
 
             <Card>
@@ -112,25 +138,33 @@ export function DashboardContainer() {
                 {data.deliveries.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Belum ada pengiriman.</p>
                 ) : (
-                  data.deliveries.map((row) => (
-                    <div key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2">
-                      <div>
-                        <p className="font-medium">{row.allocation.school.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {row.code} · {row.allocation.portionQty} porsi
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <DeliveryBadge status={row.deliveryStatus} />
-                        <SafetyBadge status={row.safetyStatus} />
-                        {canDistribution ? (
-                          <ActionLink href={`/distribution/${row.id}`}>Detail</ActionLink>
-                        ) : (
-                          <ActionLink href={`/labels/${row.id}`}>Label</ActionLink>
-                        )}
-                      </div>
-                    </div>
-                  ))
+                  data.deliveries.map((row) => {
+                    const href = canDistribution ? `/distribution/${row.id}` : `/labels/${row.id}`;
+                    return (
+                      <Link
+                        key={row.id}
+                        href={href}
+                        className="flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors hover:bg-muted/40"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium">{row.allocation.school.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {row.code} · {row.allocation.portionQty} porsi
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <DeliveryBadge status={row.deliveryStatus} />
+                          <SafetyBadge status={row.safetyStatus} />
+                        </div>
+                        <span
+                          className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground"
+                          aria-hidden
+                        >
+                          <ChevronRight className="size-4" />
+                        </span>
+                      </Link>
+                    );
+                  })
                 )}
               </CardContent>
             </Card>
@@ -158,7 +192,7 @@ export function DashboardContainer() {
                           return (
                             <TableRow key={lot.id}>
                               <TableCell>
-                                <ActionLink href={`/ingredients/${lot.ingredient.id}`} size="xs">
+                                <ActionLink href={`/ingredients/${lot.ingredient.id}`} variant="text">
                                   {lot.ingredient.name}
                                 </ActionLink>
                               </TableCell>
@@ -197,7 +231,7 @@ export function DashboardContainer() {
                         {data.deadlineWarnings.map((row) => (
                           <TableRow key={row.id}>
                             <TableCell>
-                              <ActionLink href={`/distribution/${row.id}`} size="xs">
+                              <ActionLink href={`/distribution/${row.id}`} variant="text">
                                 {row.allocation.school.name}
                               </ActionLink>
                             </TableCell>

@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/shared/auth/session";
 import { canAccessPath } from "@/shared/auth/rbac";
 
-const PUBLIC_PREFIXES = ["/login", "/q/", "/api/auth/login", "/api/auth/register", "/api/public/"];
+const PUBLIC_PREFIXES = ["/login", "/q/", "/api/auth/login", "/api/auth/register", "/api/auth/logout", "/api/public/"];
 
 function isPublic(pathname: string) {
   if (pathname === "/") return true;
@@ -24,7 +24,11 @@ export async function proxy(request: NextRequest) {
   const user = token ? await verifySessionToken(token) : null;
 
   if (pathname.startsWith("/api/public/")) return NextResponse.next();
-  if (pathname === "/api/auth/login" || pathname === "/api/auth/register") {
+  if (
+    pathname === "/api/auth/login" ||
+    pathname === "/api/auth/register" ||
+    pathname === "/api/auth/logout"
+  ) {
     return NextResponse.next();
   }
 

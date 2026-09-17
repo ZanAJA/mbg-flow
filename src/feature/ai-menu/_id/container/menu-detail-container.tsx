@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -12,6 +12,13 @@ import { PageHeader, QueryState } from "@/shared/components/page-header";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 
 type MenuDetail = {
@@ -98,10 +105,21 @@ export function MenuDetailContainer() {
                 <form className="space-y-3" onSubmit={form.handleSubmit((v) => create.mutate(v))}>
                   <div className="space-y-1">
                     <Label>Tipe porsi</Label>
-                    <select className="h-8 w-full rounded-lg border px-2 text-sm" {...form.register("portionType")}>
-                      <option value="BESAR">Porsi Besar</option>
-                      <option value="KECIL">Porsi Kecil</option>
-                    </select>
+                    <Controller
+                      control={form.control}
+                      name="portionType"
+                      render={({ field }) => (
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Pilih tipe porsi" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="BESAR">Porsi Besar</SelectItem>
+                            <SelectItem value="KECIL">Porsi Kecil</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
                   </div>
                   <div className="space-y-1">
                     <Label>Target porsi</Label>

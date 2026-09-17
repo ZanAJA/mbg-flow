@@ -52,15 +52,15 @@ export function BatchDetailContainer() {
       <QueryState isLoading={query.isLoading} error={query.error} onRetry={() => query.refetch()}>
         {batch ? (
           <div className="space-y-4">
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <ProductionBadge status={batch.productionStatus} />
               <SafetyBadge status={batch.safetyStatus} />
               {canProduction ? (
-                <ActionLink href={`/production/${batch.id}`}>Produksi</ActionLink>
+                <ActionLink href={`/production/${batch.id}`} label="Produksi" className="ml-auto" />
               ) : null}
             </div>
             <Card>
-              <CardContent className="space-y-2 pt-4 text-sm">
+              <CardContent className="space-y-2 text-sm">
                 <p><span className="text-muted-foreground">Menu:</span> {batch.menu.name}</p>
                 <p><span className="text-muted-foreground">Asal SPPG:</span> {batch.sppg.name} · {batch.sppg.address}</p>
                 <p><span className="text-muted-foreground">Porsi:</span> {batch.actualQty}/{batch.targetQty}</p>
@@ -75,22 +75,20 @@ export function BatchDetailContainer() {
               </CardHeader>
               <CardContent className="space-y-2">
                 {batch.allocations.map((allocation) => (
-                  <div key={allocation.school.name} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2">
-                    <div>
+                  <div key={allocation.school.name} className="flex items-center gap-2 rounded-lg border px-3 py-2">
+                    <div className="min-w-0 flex-1">
                       <p className="font-medium">{allocation.school.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {allocation.deliveryBatch?.code} · {allocation.packedQty}/{allocation.portionQty}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {allocation.deliveryBatch ? <DeliveryBadge status={allocation.deliveryBatch.status} /> : null}
-                      {allocation.deliveryBatch && canDistribution ? (
-                        <ActionLink href={`/distribution/${allocation.deliveryBatch.id}`}>Distribusi</ActionLink>
-                      ) : null}
-                      {allocation.deliveryBatch && !canDistribution ? (
-                        <ActionLink href={`/labels/${allocation.deliveryBatch.id}`}>Label</ActionLink>
-                      ) : null}
-                    </div>
+                    {allocation.deliveryBatch ? <DeliveryBadge status={allocation.deliveryBatch.status} /> : null}
+                    {allocation.deliveryBatch && canDistribution ? (
+                      <ActionLink href={`/distribution/${allocation.deliveryBatch.id}`} label="Distribusi" />
+                    ) : null}
+                    {allocation.deliveryBatch && !canDistribution ? (
+                      <ActionLink href={`/labels/${allocation.deliveryBatch.id}`} label="Label" />
+                    ) : null}
                   </div>
                 ))}
               </CardContent>

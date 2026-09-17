@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { usePathname } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ClipboardList,
   CookingPot,
@@ -17,7 +17,7 @@ import {
   Users,
   UtensilsCrossed,
 } from "lucide-react";
-import { apiFetch } from "@/shared/lib/api";
+import { ApiError, apiFetch } from "@/shared/lib/api";
 import type { Role, SessionShape } from "@/shared/components/session-types";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -85,7 +85,7 @@ function NavLinks({
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const isPublic = pathname === "/" || pathname === "/login" || pathname.startsWith("/q/");
@@ -94,8 +94,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     queryKey: ["me"],
     queryFn: () => apiFetch<SessionShape>("/api/auth/me"),
     enabled: !isPublic,
-    retry: false,
+    retry: 1,
+    refetchOnMount: "always",
+    staleTime: 0,
   });
+
+  useEffect(() => {
+    if (isPublic) return;
+    if (me.isError && me.error instanceof ApiError && me.error.status === 401) {
+      queryClient.clear();
+      window.location.assign(`/login?next=${encodeURIComponent(pathname)}`);
+    }
+  }, [isPublic, me.isError, me.error, pathname, queryClient]);
 
   if (isPublic) return <>{children}</>;
 
@@ -104,11 +114,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   async function confirmLogout() {
     setLoggingOut(true);
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+      queryClient.clear();
       setLogoutOpen(false);
-      router.push("/login");
-      router.refresh();
-    } finally {
+      // Full navigation so proxy + cookie state are not stuck on soft client routing.
+      window.location.assign("/login");
+    } catch {
       setLoggingOut(false);
     }
   }

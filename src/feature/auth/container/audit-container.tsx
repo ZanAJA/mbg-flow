@@ -1,18 +1,26 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ChevronRight } from "lucide-react";
 import { apiFetch } from "@/shared/lib/api";
 import { PageHeader, QueryState, EmptyState } from "@/shared/components/page-header";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
+import { DatePicker } from "@/shared/components/ui/date-picker";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import { formatDateTime } from "@/shared/lib/format";
 import { TIMEZONE } from "@/shared/types/enums";
-import { cn } from "@/shared/lib/utils";
 
 type Log = {
   id: string;
@@ -52,55 +60,6 @@ const ENTITY_LABELS: Record<string, string> = {
   DeliveryBatch: "Delivery batch",
 };
 
-const FIELD_LABELS: Record<string, string> = {
-  lotCode: "Kode lot",
-  quantity: "Jumlah",
-  expiryDate: "Kedaluwarsa",
-  receivedAt: "Diterima",
-  storageType: "Penyimpanan",
-  supplier: "Pemasok",
-  status: "Status",
-  code: "Kode",
-  targetQty: "Target porsi",
-  actualQty: "Porsi aktual",
-  portionQty: "Jumlah porsi",
-  portionType: "Tipe porsi",
-  menuId: "Menu",
-  schoolId: "Sekolah",
-  startedAt: "Mulai",
-  finishedAt: "Selesai",
-  safeUntil: "Batas aman",
-  name: "Nama",
-  role: "Peran",
-  deliveryStatus: "Status kirim",
-  safetyStatus: "Status aman",
-  productionStatus: "Status produksi",
-  engine: "Mesin rekomendasi",
-  top: "Menu teratas",
-  targetPortions: "Target porsi",
-  category: "Kategori",
-  unit: "Satuan",
-  componentKey: "Komponen",
-};
-
-const SKIP_FIELDS = new Set([
-  "id",
-  "ingredientId",
-  "productionBatchId",
-  "actorUserId",
-  "createdAt",
-  "updatedAt",
-  "ingredient",
-  "menu",
-  "sppg",
-  "allocations",
-  "components",
-  "actor",
-  "school",
-  "deliveryBatch",
-  "qrToken",
-]);
-
 function parseJson(value: string | null): Record<string, unknown> | null {
   if (!value) return null;
   try {
@@ -112,47 +71,6 @@ function parseJson(value: string | null): Record<string, unknown> | null {
   } catch {
     return null;
   }
-}
-
-function formatValue(value: unknown): string {
-  if (value == null) return "—";
-  if (typeof value === "boolean") return value ? "Ya" : "Tidak";
-  if (typeof value === "number") return String(value);
-  if (typeof value === "string") {
-    if (/^\d{4}-\d{2}-\d{2}T/.test(value)) {
-      const date = new Date(value);
-      if (!Number.isNaN(date.getTime())) return formatDateTime(date);
-    }
-    return value;
-  }
-  if (Array.isArray(value)) return `${value.length} item`;
-  if (typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    if (typeof record.name === "string") return record.name;
-    if (typeof record.code === "string") return record.code;
-    if (typeof record.lotCode === "string") return record.lotCode;
-    return JSON.stringify(value);
-  }
-  return String(value);
-}
-
-function fieldLabel(key: string) {
-  return FIELD_LABELS[key] ?? key;
-}
-
-function collectDiffs(before: Record<string, unknown> | null, after: Record<string, unknown> | null) {
-  const keys = new Set([...Object.keys(before ?? {}), ...Object.keys(after ?? {})]);
-  const diffs: Array<{ key: string; before: string; after: string }> = [];
-
-  for (const key of keys) {
-    if (SKIP_FIELDS.has(key)) continue;
-    const prevText = formatValue(before?.[key]);
-    const nextText = formatValue(after?.[key]);
-    if (before && after && prevText === nextText) continue;
-    diffs.push({ key, before: prevText, after: nextText });
-  }
-
-  return diffs;
 }
 
 function roleLabel(role: string) {
@@ -171,26 +89,50 @@ function jakartaDayKey(value: string | Date) {
   }).format(new Date(value));
 }
 
+function auditHref(row: Log): string {
+  const payload = parseJson(row.afterJson) ?? parseJson(row.beforeJson);
+
+  switch (row.entityType) {
+    case "Menu":
+      return `/menus/${row.entityId}`;
+    case "Ingredient":
+      return `/ingredients/${row.entityId}`;
+    case "IngredientLot": {
+      const ingredientId =
+        typeof payload?.ingredientId === "string"
+          ? payload.ingredientId
+          : typeof (payload?.ingredient as { id?: string } | undefined)?.id === "string"
+            ? (payload?.ingredient as { id: string }).id
+            : null;
+      return ingredientId ? `/ingredients/${ingredientId}` : "/ingredients";
+    }
+    case "ProductionBatch":
+      return `/production/${row.entityId}`;
+    case "ProductionComponent": {
+      const batchId = typeof payload?.productionBatchId === "string" ? payload.productionBatchId : null;
+      return batchId ? `/production/${batchId}` : "/production";
+    }
+    case "SchoolAllocation": {
+      const batchId = typeof payload?.productionBatchId === "string" ? payload.productionBatchId : null;
+      return batchId ? `/batches/${batchId}` : "/batches";
+    }
+    case "DeliveryBatch":
+      return `/distribution/${row.entityId}`;
+    default:
+      return "/audit";
+  }
+}
+
 function AuditLogRow({ row }: { row: Log }) {
-  const [open, setOpen] = useState(false);
-  const before = parseJson(row.beforeJson);
-  const after = parseJson(row.afterJson);
-  const diffs = collectDiffs(before, after);
   const actionLabel = ACTION_LABELS[row.action] ?? row.action;
   const entityLabel = ENTITY_LABELS[row.entityType] ?? row.entityType;
-  const hasDetails = Boolean(row.reason) || diffs.length > 0;
+  const href = auditHref(row);
 
   return (
-    <Card>
-      <CardContent className="pt-4">
-        <button
-          type="button"
-          className="flex w-full items-start justify-between gap-3 text-left"
-          onClick={() => hasDetails && setOpen((value) => !value)}
-          disabled={!hasDetails}
-          aria-expanded={open}
-        >
-          <div className="min-w-0 space-y-1">
+    <Link href={href} className="block">
+      <Card size="sm" className="transition-colors hover:bg-muted/40">
+        <CardContent className="flex items-center gap-3">
+          <div className="min-w-0 flex-1 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <p className="font-medium">{actionLabel}</p>
               {row.action === "supervisor_correction" ? (
@@ -202,68 +144,22 @@ function AuditLogRow({ row }: { row: Log }) {
             <p className="text-sm text-muted-foreground">
               {row.actor.name} · {roleLabel(row.actor.role)} · {formatDateTime(row.createdAt)}
             </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <p className="hidden font-mono text-xs text-muted-foreground sm:block">
-              {entityLabel} · {row.entityId.slice(0, 8)}
-            </p>
-            {hasDetails ? (
-              <span
-                className={cn(
-                  "inline-flex size-7 items-center justify-center rounded-md border text-sm transition-transform",
-                  open && "rotate-90",
-                )}
-                aria-hidden
-              >
-                →
-              </span>
-            ) : null}
-          </div>
-        </button>
-
-        {open && hasDetails ? (
-          <div className="mt-3 space-y-3 border-t pt-3">
             {row.reason ? (
-              <p className="rounded-lg bg-muted/60 px-3 py-2 text-sm">
-                <span className="font-medium">Alasan: </span>
-                {row.reason}
-              </p>
+              <p className="line-clamp-1 text-xs text-muted-foreground">Alasan: {row.reason}</p>
             ) : null}
-
-            {diffs.length > 0 ? (
-              <div className="overflow-hidden rounded-lg border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[28%]">Field</TableHead>
-                      <TableHead className="w-[36%]">Sebelum</TableHead>
-                      <TableHead className="w-[36%]">Sesudah</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {diffs.map((diff) => (
-                      <TableRow key={`${row.id}-${diff.key}`}>
-                        <TableCell className="align-top font-medium">{fieldLabel(diff.key)}</TableCell>
-                        <TableCell className="align-top text-muted-foreground">
-                          {before ? diff.before : "—"}
-                        </TableCell>
-                        <TableCell className="align-top">{after ? diff.after : "—"}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : null}
-
-            <div className="flex justify-end">
-              <Button type="button" variant="ghost" size="xs" onClick={() => setOpen(false)}>
-                Tutup
-              </Button>
-            </div>
           </div>
-        ) : null}
-      </CardContent>
-    </Card>
+          <p className="hidden shrink-0 font-mono text-xs text-muted-foreground sm:block">
+            {entityLabel} · {row.entityId.slice(0, 8)}
+          </p>
+          <span
+            className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground"
+            aria-hidden
+          >
+            <ChevronRight className="size-4" />
+          </span>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 
@@ -317,46 +213,49 @@ export function AuditContainer() {
     <div>
       <PageHeader title="Audit log" />
       <Card className="mb-4">
-        <CardContent className="grid gap-3 pt-4 md:grid-cols-2 xl:grid-cols-5">
+        <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <div className="space-y-1">
             <Label htmlFor="audit-from">Dari tanggal</Label>
-            <Input id="audit-from" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            <DatePicker id="audit-from" value={dateFrom} onChange={setDateFrom} placeholder="Dari tanggal" />
           </div>
           <div className="space-y-1">
             <Label htmlFor="audit-to">Sampai tanggal</Label>
-            <Input id="audit-to" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            <DatePicker id="audit-to" value={dateTo} onChange={setDateTo} placeholder="Sampai tanggal" />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="audit-action">Kegiatan</Label>
-            <select
-              id="audit-action"
-              className="h-8 w-full rounded-lg border px-2 text-sm"
-              value={action}
-              onChange={(e) => setAction(e.target.value)}
-            >
-              <option value="">Semua kegiatan</option>
-              {actionOptions.map((key) => (
-                <option key={key} value={key}>
-                  {ACTION_LABELS[key] ?? key}
-                </option>
-              ))}
-            </select>
+            <Label>Kegiatan</Label>
+            <Select value={action || "__all__"} onValueChange={(value) => setAction(value === "__all__" ? "" : value)}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Semua kegiatan" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Semua kegiatan</SelectItem>
+                {actionOptions.map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {ACTION_LABELS[key] ?? key}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="audit-entity">Entitas</Label>
-            <select
-              id="audit-entity"
-              className="h-8 w-full rounded-lg border px-2 text-sm"
-              value={entityType}
-              onChange={(e) => setEntityType(e.target.value)}
+            <Label>Entitas</Label>
+            <Select
+              value={entityType || "__all__"}
+              onValueChange={(value) => setEntityType(value === "__all__" ? "" : value)}
             >
-              <option value="">Semua entitas</option>
-              {entityOptions.map((key) => (
-                <option key={key} value={key}>
-                  {ENTITY_LABELS[key] ?? key}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Semua entitas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Semua entitas</SelectItem>
+                {entityOptions.map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {ENTITY_LABELS[key] ?? key}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1">
             <Label htmlFor="audit-actor">Pelaku</Label>

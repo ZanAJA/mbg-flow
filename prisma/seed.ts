@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -441,7 +442,81 @@ async function main() {
     ],
   });
 
-  console.log("Seeded SPPG Cilandak with demo users, lots, schools, and menus.");
+  const menus = await prisma.menu.findMany({ orderBy: { name: "asc" } });
+  const demoMenu = menus.find((menu) => menu.name.includes("Ayam Katsu")) ?? menus[0];
+  const demoSchool = schools[0];
+  const readyAt = hoursFromNow(-1.2);
+  const departedAt = hoursFromNow(-0.4);
+  const safeUntil = hoursFromNow(2.5);
+  const qrToken = randomUUID();
+  const { start: todayStart } = (() => {
+    const day = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Jakarta",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+    return { start: new Date(`${day}T00:00:00+07:00`) };
+  })();
+
+  const demoBatch = await prisma.productionBatch.create({
+    data: {
+      code: "PB-CIL-DEMO-01",
+      date: todayStart,
+      portionType: "BESAR",
+      menuId: demoMenu.id,
+      menuSnapshot: JSON.stringify({
+        name: demoMenu.name,
+        durabilityNote: demoMenu.durabilityNote,
+      }),
+      targetQty: 800,
+      actualQty: 780,
+      status: "PRODUCTION_COMPLETE",
+      readyAt,
+      safeUntil,
+      sppgId: sppg.id,
+      components: {
+        create: katsuComponents.map((component) => {
+          const affects = ["nasi", "protein", "sayur"].includes(component.key);
+          const windowMinutes = component.key === "sayur" ? 180 : 240;
+          return {
+            name: component.name,
+            componentKey: component.key,
+            affectsSafetyDeadline: affects,
+            status: "FINISHED",
+            startedAt: hoursFromNow(-3),
+            finishedAt: hoursFromNow(-1.2),
+            safeWindowMinutes: windowMinutes,
+            safeUntil: affects ? hoursFromNow(windowMinutes / 60 - 1.2) : null,
+            sortOrder: component.sortOrder,
+          };
+        }),
+      },
+    },
+  });
+
+  await prisma.schoolAllocation.create({
+    data: {
+      productionBatchId: demoBatch.id,
+      schoolId: demoSchool.id,
+      portionQty: 250,
+      packedQty: 250,
+      readyAt,
+      deliveryBatch: {
+        create: {
+          code: "DL-CIL-DEMO-01",
+          status: "IN_DELIVERY",
+          etaMinutes: Math.max(15, Math.round(demoSchool.distanceKm * 6)),
+          readyAt,
+          departedAt,
+          qrToken,
+        },
+      },
+    },
+  });
+
+  console.log("Seeded SPPG Cilandak with demo users, lots, schools, menus, and delivery QR.");
+  console.log(`Demo public QR path: /q/${qrToken}`);
 }
 
 main()

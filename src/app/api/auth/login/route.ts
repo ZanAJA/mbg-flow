@@ -2,9 +2,9 @@ import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/shared/db/prisma";
-import { signSession, SESSION_COOKIE } from "@/shared/auth/session";
+import { signSession, SESSION_COOKIE, sessionCookieOptions } from "@/shared/auth/session";
 import { handleApiError, jsonError, jsonOk } from "@/shared/lib/http";
-import { JWT_TTL_SECONDS, type Role } from "@/shared/types/enums";
+import type { Role } from "@/shared/types/enums";
 
 const schema = z.object({
   email: z.string().email(),
@@ -27,13 +27,7 @@ export async function POST(request: Request) {
       sppgId: user.sppgId,
     });
     const jar = await cookies();
-    jar.set(SESSION_COOKIE, token, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      maxAge: JWT_TTL_SECONDS,
-      secure: process.env.NODE_ENV === "production",
-    });
+    jar.set(SESSION_COOKIE, token, sessionCookieOptions());
     return jsonOk({
       id: user.id,
       name: user.name,

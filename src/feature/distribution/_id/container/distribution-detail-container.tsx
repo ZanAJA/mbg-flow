@@ -80,7 +80,7 @@ export function DistributionDetailContainer() {
               <SafetyBadge status={row.safetyStatus} />
             </div>
             <Card>
-              <CardContent className="space-y-2 pt-4 text-sm">
+              <CardContent className="space-y-2 text-sm">
                 <p>{row.code} · {row.allocation.portionQty} porsi</p>
                 <p>{row.allocation.school.address}</p>
                 <p>Jarak {row.allocation.school.distanceKm} km · ETA {row.etaMinutes ?? "—"} menit</p>
@@ -102,8 +102,8 @@ export function DistributionDetailContainer() {
               >
                 Tandai diterima sekolah
               </Button>
-              <ActionLink href={`/labels/${row.id}`}>Label QR</ActionLink>
-              <ActionLink href={`/batches/${row.allocation.batch.id}`}>Batch</ActionLink>
+              <ActionLink href={`/labels/${row.id}`} label="Label QR" />
+              <ActionLink href={`/batches/${row.allocation.batch.id}`} label="Batch" />
             </div>
           </div>
         ) : null}

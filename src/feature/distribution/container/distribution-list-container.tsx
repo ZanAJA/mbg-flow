@@ -3,9 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/api";
 import { PageHeader, QueryState, EmptyState } from "@/shared/components/page-header";
-import { ActionLink } from "@/shared/components/action-link";
+import { NavCard } from "@/shared/components/action-link";
 import { DeliveryBadge, SafetyBadge } from "@/shared/components/status-badges";
-import { Card, CardContent } from "@/shared/components/ui/card";
 
 type Delivery = {
   id: string;
@@ -41,25 +40,29 @@ export function DistributionListContainer() {
         ) : (
           <div className="space-y-3">
             {rows.map((row) => (
-              <Card key={row.id}>
-                <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-4">
-                  <div>
+              <NavCard
+                key={row.id}
+                href={`/distribution/${row.id}`}
+                label={`Operasikan ${row.allocation.school.name}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs text-muted-foreground">Urutan {row.recommendOrder}</p>
                     <p className="font-semibold">{row.allocation.school.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {row.code} · {row.allocation.portionQty} porsi · {row.allocation.school.distanceKm} km · ETA {row.etaMinutes ?? "—"} menit
+                      {row.code} · {row.allocation.portionQty} porsi · {row.allocation.school.distanceKm} km · ETA{" "}
+                      {row.etaMinutes ?? "—"} menit
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {row.allocation.batch.code} · {row.allocation.batch.menu.name}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
                     <DeliveryBadge status={row.deliveryStatus} />
                     <SafetyBadge status={row.safetyStatus} />
-                    <ActionLink href={`/distribution/${row.id}`}>Operasikan</ActionLink>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </NavCard>
             ))}
           </div>
         )}

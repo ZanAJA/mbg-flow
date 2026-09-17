@@ -39,7 +39,7 @@ export function IngredientDetailContainer() {
       <QueryState isLoading={query.isLoading} error={query.error} onRetry={() => query.refetch()}>
         {data ? (
           <Card>
-            <CardContent className="pt-4">
+            <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>

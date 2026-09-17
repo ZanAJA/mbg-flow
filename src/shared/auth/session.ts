@@ -9,6 +9,17 @@ export type SessionUser = {
   sppgId: string;
 };
 
+/** Shared cookie attrs so set/clear always target the same cookie. */
+export function sessionCookieOptions(maxAge = JWT_TTL_SECONDS) {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge,
+    secure: process.env.NODE_ENV === "production",
+  };
+}
+
 function secret() {
   const value = process.env.JWT_SECRET;
   if (!value) {
