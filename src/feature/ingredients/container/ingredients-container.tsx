@@ -293,7 +293,7 @@ export function IngredientsContainer() {
       </QueryState>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="fixed inset-0 z-0 flex items-center justify-center bg-black/40 p-4">
           <Card className="w-full max-w-lg bg-background">
             <CardHeader>
               <CardTitle>Penerimaan lot</CardTitle>

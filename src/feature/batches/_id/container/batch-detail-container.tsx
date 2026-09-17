@@ -60,15 +60,19 @@ export function BatchDetailContainer() {
               ) : null}
             </div>
             <Card>
-              <CardContent className="space-y-2 text-sm">
-                <p><span className="text-muted-foreground">Menu:</span> {batch.menu.name}</p>
-                <p><span className="text-muted-foreground">Asal SPPG:</span> {batch.sppg.name} · {batch.sppg.address}</p>
-                <p><span className="text-muted-foreground">Porsi:</span> {batch.actualQty}/{batch.targetQty}</p>
-                <p><span className="text-muted-foreground">Ready at:</span> {formatDateTime(batch.readyAt)}</p>
-                <p><span className="text-muted-foreground">Safe until:</span> {formatDateTime(batch.safeUntil)}</p>
+              <CardContent className="flex flex-row gap-40 items-center">
+                <div className="space-y-2 text-sm">
+                  <p><span className="text-muted-foreground">Menu:</span> {batch.menu.name}</p>
+                  <p><span className="text-muted-foreground">Asal SPPG:</span> {batch.sppg.name} · {batch.sppg.address}</p>
+                  <p><span className="text-muted-foreground">Porsi:</span> {batch.actualQty}/{batch.targetQty}</p>
+                  <p><span className="text-muted-foreground">Ready at:</span> {formatDateTime(batch.readyAt)}</p>
+                  <p><span className="text-muted-foreground">Safe until:</span> {formatDateTime(batch.safeUntil)}</p>
+                </div>
+                <div className="flex">
+                  <Countdown safeUntil={batch.safeUntil} serverNow={query.data!.serverNow} />
+                </div>
               </CardContent>
             </Card>
-            <Countdown safeUntil={batch.safeUntil} serverNow={query.data!.serverNow} />
             <Card>
               <CardHeader>
                 <CardTitle>Alokasi sekolah / Delivery Batch</CardTitle>

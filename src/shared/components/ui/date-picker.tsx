@@ -82,7 +82,7 @@ export function DatePicker({
       </ArkDatePicker.Control>
 
       <Portal>
-        <ArkDatePicker.Positioner className="z-[100]">
+        <ArkDatePicker.Positioner className="z-50">
           <ArkDatePicker.Content className="w-[min(100vw-2rem,20rem)] rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-lg outline-none">
             <div className="mb-3 flex gap-2">
               <ArkDatePicker.YearSelect className="h-8 flex-1 rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
@@ -127,10 +127,10 @@ export function DatePicker({
                                   className={cn(
                                     "mx-auto flex size-9 items-center justify-center rounded-lg text-sm transition-colors",
                                     "hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-ring",
-                                    "data-[selected]:bg-primary data-[selected]:text-primary-foreground",
-                                    "data-[today]:font-semibold data-[today]:underline data-[today]:underline-offset-2",
-                                    "data-[outside-range]:text-muted-foreground/40",
-                                    "data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
+                                    "data-selected:bg-primary data-selected:text-primary-foreground",
+                                    "data-today:font-semibold data-today:underline data-today:underline-offset-2",
+                                    "data-outside-range:text-muted-foreground/40",
+                                    "data-disabled:pointer-events-none data-disabled:opacity-40",
                                   )}
                                 >
                                   {day.day}
@@ -167,7 +167,7 @@ export function DatePicker({
                           <ArkDatePicker.TableRow key={rowIndex}>
                             {months.map((month, monthIndex) => (
                               <ArkDatePicker.TableCell key={monthIndex} value={month.value}>
-                                <ArkDatePicker.TableCellTrigger className="w-full rounded-lg px-2 py-2 hover:bg-primary/10 data-[selected]:bg-primary data-[selected]:text-primary-foreground">
+                                <ArkDatePicker.TableCellTrigger className="w-full rounded-lg px-2 py-2 hover:bg-primary/10 data-selected:bg-primary data-selected:text-primary-foreground">
                                   {month.label}
                                 </ArkDatePicker.TableCellTrigger>
                               </ArkDatePicker.TableCell>
@@ -202,7 +202,7 @@ export function DatePicker({
                           <ArkDatePicker.TableRow key={rowIndex}>
                             {years.map((year, yearIndex) => (
                               <ArkDatePicker.TableCell key={yearIndex} value={year.value}>
-                                <ArkDatePicker.TableCellTrigger className="w-full rounded-lg px-2 py-2 hover:bg-primary/10 data-[selected]:bg-primary data-[selected]:text-primary-foreground">
+                                <ArkDatePicker.TableCellTrigger className="w-full rounded-lg px-2 py-2 hover:bg-primary/10 data-selected:bg-primary data-selected:text-primary-foreground">
                                   {year.label}
                                 </ArkDatePicker.TableCellTrigger>
                               </ArkDatePicker.TableCell>

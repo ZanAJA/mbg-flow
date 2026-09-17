@@ -39,7 +39,7 @@ function MetaRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid grid-cols-[7.5rem_1fr] gap-2 text-sm sm:grid-cols-[9rem_1fr]">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 font-medium break-words">{value}</dd>
+      <dd className="min-w-0 font-medium wrap-break-word">{value}</dd>
     </div>
   );
 }
@@ -88,7 +88,7 @@ export function DistributionDetailContainer() {
         {row ? (
           <div className="space-y-4">
             <Card>
-              <CardContent>
+              <CardContent className="flex flex-row gap-40">
                 <dl className="space-y-2.5">
                   <MetaRow label="Kode kirim" value={`${row.code} · ${row.allocation.portionQty} porsi`} />
                   <MetaRow label="Alamat" value={row.allocation.school.address} />
@@ -104,11 +104,13 @@ export function DistributionDetailContainer() {
                   <MetaRow label="Berangkat" value={formatDateTime(row.departedAt)} />
                   <MetaRow label="Diterima" value={formatDateTime(row.receivedAt)} />
                 </dl>
+                <div className="flex flex-col justify-center">
+                  <Countdown safeUntil={row.allocation.batch.safeUntil} serverNow={query.data!.serverNow} />
+                </div>
               </CardContent>
             </Card>
 
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <Countdown safeUntil={row.allocation.batch.safeUntil} serverNow={query.data!.serverNow} />
               <div className="flex flex-wrap items-center gap-2">
                 <Button disabled={row.status !== "READY" || start.isPending} onClick={() => start.mutate()}>
                   Berangkatkan
@@ -128,6 +130,7 @@ export function DistributionDetailContainer() {
                 </ActionLink>
               </div>
             </div>
+            
           </div>
         ) : null}
       </QueryState>

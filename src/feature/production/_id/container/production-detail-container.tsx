@@ -152,7 +152,7 @@ export function ProductionDetailContainer() {
                 {batch.portionType === "BESAR" ? "Porsi Besar" : "Porsi Kecil"} · {batch.actualQty}/{batch.targetQty} porsi · {batch.sppg.name}
               </span>
             </div>
-            <div className="flex justify-center sm:justify-start">
+            <div className="flex justify-center">
               <Countdown safeUntil={batch.safeUntil} serverNow={query.data!.serverNow} />
             </div>
 
