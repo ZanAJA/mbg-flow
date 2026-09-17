@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { cn } from "@/shared/lib/utils";
+import { parseMapsLocation } from "@/shared/lib/geo";
 import { ROLE_LABEL } from "@/shared/auth/rbac";
 import { ROLES, type Role } from "@/shared/types/enums";
 
@@ -33,10 +34,33 @@ const registerSchema = z
     password: z.string().min(6, "Kata sandi minimal 6 karakter"),
     confirmPassword: z.string().min(6, "Konfirmasi kata sandi"),
     role: z.enum(ROLES),
+    sppgName: z.string().optional(),
+    sppgAddress: z.string().optional(),
+    mapsUrl: z.string().optional(),
   })
   .refine((values) => values.password === values.confirmPassword, {
     message: "Konfirmasi kata sandi tidak cocok",
     path: ["confirmPassword"],
+  })
+  .superRefine((values, ctx) => {
+    if (values.role !== "SUPERVISOR") return;
+    if (!values.sppgName || values.sppgName.trim().length < 2) {
+      ctx.addIssue({ code: "custom", message: "Nama SPPG wajib", path: ["sppgName"] });
+    }
+    if (!values.sppgAddress || values.sppgAddress.trim().length < 4) {
+      ctx.addIssue({ code: "custom", message: "Alamat SPPG wajib", path: ["sppgAddress"] });
+    }
+    if (!values.mapsUrl?.trim()) {
+      ctx.addIssue({ code: "custom", message: "Link Google Maps wajib", path: ["mapsUrl"] });
+      return;
+    }
+    if (!parseMapsLocation(values.mapsUrl)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Link Maps tidak berisi koordinat. Buka lokasi → Bagikan → salin link penuh.",
+        path: ["mapsUrl"],
+      });
+    }
   });
 
 type LoginValues = z.infer<typeof loginSchema>;
@@ -80,8 +104,13 @@ export function LoginContainer() {
       password: "",
       confirmPassword: "",
       role: "KITCHEN",
+      sppgName: "",
+      sppgAddress: "",
+      mapsUrl: "",
     },
   });
+
+  const registerRole = registerForm.watch("role");
 
   async function onLogin(values: LoginValues) {
     const response = await fetch("/api/auth/login", {
@@ -100,6 +129,7 @@ export function LoginContainer() {
   }
 
   async function onRegister(values: RegisterValues) {
+    const coords = values.role === "SUPERVISOR" ? parseMapsLocation(values.mapsUrl ?? "") : null;
     const response = await fetch("/api/auth/register", {
       method: "POST",
       credentials: "same-origin",
@@ -109,6 +139,14 @@ export function LoginContainer() {
         email: values.email,
         password: values.password,
         role: values.role,
+        ...(values.role === "SUPERVISOR" && coords
+          ? {
+              sppgName: values.sppgName,
+              sppgAddress: values.sppgAddress,
+              sppgLat: coords.lat,
+              sppgLng: coords.lng,
+            }
+          : {}),
       }),
     });
     const body = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -243,9 +281,13 @@ export function LoginContainer() {
             </>
           ) : (
             <>
-              <div className="mb-6">
+                <div className="mb-6">
                 <h2 className="text-2xl font-semibold tracking-tight">Daftar</h2>
-                <p className="mt-1 text-sm text-muted-foreground">Buat akun baru untuk SPPG Cilandak.</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {registerRole === "SUPERVISOR"
+                    ? "Supervisor mendaftarkan SPPG sekaligus (nama, alamat, koordinat)."
+                    : "Buat akun dapur/distributor untuk SPPG yang sudah ada."}
+                </p>
               </div>
 
               <form className="space-y-4" onSubmit={registerForm.handleSubmit(onRegister)}>
@@ -284,6 +326,44 @@ export function LoginContainer() {
                     )}
                   />
                 </div>
+                {registerRole === "SUPERVISOR" ? (
+                  <div className="space-y-3 rounded-lg border border-dashed p-3">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Lokasi SPPG / tempat MBG
+                    </p>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="sppg-name">Nama SPPG</Label>
+                      <Input id="sppg-name" placeholder="SPPG Cilandak" {...registerForm.register("sppgName")} />
+                      {registerForm.formState.errors.sppgName ? (
+                        <p className="text-xs text-destructive">{registerForm.formState.errors.sppgName.message}</p>
+                      ) : null}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="sppg-address">Alamat SPPG</Label>
+                      <Input id="sppg-address" {...registerForm.register("sppgAddress")} />
+                      {registerForm.formState.errors.sppgAddress ? (
+                        <p className="text-xs text-destructive">
+                          {registerForm.formState.errors.sppgAddress.message}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="sppg-maps">Link Google Maps</Label>
+                      <Input
+                        id="sppg-maps"
+                        placeholder="https://www.google.com/maps/place/..."
+                        {...registerForm.register("mapsUrl")}
+                      />
+                      {registerForm.formState.errors.mapsUrl ? (
+                        <p className="text-xs text-destructive">{registerForm.formState.errors.mapsUrl.message}</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          Di Maps: pin lokasi → Bagikan → salin link (bukan short link goo.gl).
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
                 <div className="space-y-1.5">
                   <Label htmlFor="register-password">Kata sandi</Label>
                   <Input id="register-password" type="password" {...registerForm.register("password")} />

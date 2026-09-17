@@ -6,12 +6,32 @@ import { signSession, SESSION_COOKIE, sessionCookieOptions } from "@/shared/auth
 import { handleApiError, jsonError, jsonOk } from "@/shared/lib/http";
 import { ROLES, type Role } from "@/shared/types/enums";
 
-const schema = z.object({
-  name: z.string().trim().min(2, "Nama terlalu pendek"),
-  email: z.string().email(),
-  password: z.string().min(6, "Kata sandi minimal 6 karakter"),
-  role: z.enum(ROLES),
-});
+const schema = z
+  .object({
+    name: z.string().trim().min(2, "Nama terlalu pendek"),
+    email: z.string().email(),
+    password: z.string().min(6, "Kata sandi minimal 6 karakter"),
+    role: z.enum(ROLES),
+    sppgName: z.string().trim().optional(),
+    sppgAddress: z.string().trim().optional(),
+    sppgLat: z.coerce.number().min(-90).max(90).optional(),
+    sppgLng: z.coerce.number().min(-180).max(180).optional(),
+  })
+  .superRefine((values, ctx) => {
+    if (values.role !== "SUPERVISOR") return;
+    if (!values.sppgName || values.sppgName.length < 2) {
+      ctx.addIssue({ code: "custom", message: "Nama SPPG wajib diisi", path: ["sppgName"] });
+    }
+    if (!values.sppgAddress || values.sppgAddress.length < 4) {
+      ctx.addIssue({ code: "custom", message: "Alamat SPPG wajib diisi", path: ["sppgAddress"] });
+    }
+    if (values.sppgLat == null) {
+      ctx.addIssue({ code: "custom", message: "Latitude SPPG wajib diisi", path: ["sppgLat"] });
+    }
+    if (values.sppgLng == null) {
+      ctx.addIssue({ code: "custom", message: "Longitude SPPG wajib diisi", path: ["sppgLng"] });
+    }
+  });
 
 export async function POST(request: Request) {
   try {
@@ -21,8 +41,22 @@ export async function POST(request: Request) {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) return jsonError(409, "Email sudah terdaftar.");
 
-    const sppg = await prisma.sppg.findFirst({ orderBy: { name: "asc" } });
-    if (!sppg) return jsonError(500, "SPPG belum tersedia. Hubungi administrator.");
+    let sppgId: string;
+    if (body.role === "SUPERVISOR") {
+      const sppg = await prisma.sppg.create({
+        data: {
+          name: body.sppgName!,
+          address: body.sppgAddress!,
+          lat: body.sppgLat!,
+          lng: body.sppgLng!,
+        },
+      });
+      sppgId = sppg.id;
+    } else {
+      const sppg = await prisma.sppg.findFirst({ orderBy: { name: "asc" } });
+      if (!sppg) return jsonError(500, "SPPG belum tersedia. Hubungi administrator.");
+      sppgId = sppg.id;
+    }
 
     const passwordHash = await bcrypt.hash(body.password, 10);
     const user = await prisma.user.create({
@@ -31,7 +65,7 @@ export async function POST(request: Request) {
         email,
         passwordHash,
         role: body.role,
-        sppgId: sppg.id,
+        sppgId,
       },
     });
 

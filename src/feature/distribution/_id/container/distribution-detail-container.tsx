@@ -70,7 +70,7 @@ export function DistributionDetailContainer() {
   const receive = useMutation({
     mutationFn: () => apiFetch(`/api/delivery-batches/${params.id}/receive`, { method: "POST", body: "{}" }),
     onSuccess: () => {
-      toast.success("Diterima sekolah. Status delivery RECEIVED, safety status tidak ikut berhenti.");
+      toast.success("Diterima sekolah. Countdown berhenti di 00:00:00 jika batas aman sudah habis.");
       invalidate();
     },
     onError: (error) => toast.error(error.message),
@@ -105,7 +105,11 @@ export function DistributionDetailContainer() {
                   <MetaRow label="Diterima" value={formatDateTime(row.receivedAt)} />
                 </dl>
                 <div className="flex flex-col justify-center">
-                  <Countdown safeUntil={row.allocation.batch.safeUntil} serverNow={query.data!.serverNow} />
+                  <Countdown
+                    safeUntil={row.allocation.batch.safeUntil}
+                    serverNow={query.data!.serverNow}
+                    received={row.status === "RECEIVED"}
+                  />
                 </div>
               </CardContent>
             </Card>

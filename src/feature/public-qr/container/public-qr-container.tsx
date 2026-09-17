@@ -149,7 +149,11 @@ export function PublicQrContainer({
                 </p>
               </div>
               <div className="flex justify-center py-1">
-                <Countdown safeUntil={data.safeUntil} serverNow={serverNow} />
+                <Countdown
+                  safeUntil={data.safeUntil}
+                  serverNow={serverNow}
+                  received={data.deliveryStatus === "RECEIVED"}
+                />
               </div>
               {data.safeUntil ? (
                 <p className="mt-3 text-center text-xs text-muted-foreground">

@@ -8,24 +8,53 @@ datasource db {
 }
 
 model User {
-  id           String     @id @default(cuid())
-  name         String
-  email        String     @unique
-  passwordHash String
-  role         String
-  sppgId       String
-  active       Boolean    @default(true)
-  createdAt    DateTime   @default(now())
-  sppg         Sppg       @relation(fields: [sppgId], references: [id])
-  auditLogs    AuditLog[]
+  id              String       @id @default(cuid())
+  name            String
+  email           String       @unique
+  passwordHash    String
+  role            String
+  sppgId          String
+  active          Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  sppg            Sppg         @relation(fields: [sppgId], references: [id])
+  auditLogs       AuditLog[]
+  createdTeams    Team[]       @relation("TeamCreator")
+  teamMemberships TeamMember[]
 }
 
 model Sppg {
-  id         String            @id @default(cuid())
-  name       String
-  address    String
-  users      User[]
-  batches    ProductionBatch[]
+  id      String            @id @default(cuid())
+  name    String
+  address String
+  lat     Float?
+  lng     Float?
+  users   User[]
+  batches ProductionBatch[]
+  teams   Team[]
+}
+
+model Team {
+  id          String       @id @default(cuid())
+  sppgId      String
+  name        String
+  inviteCode  String       @unique
+  createdById String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  sppg        Sppg         @relation(fields: [sppgId], references: [id])
+  createdBy   User         @relation("TeamCreator", fields: [createdById], references: [id])
+  members     TeamMember[]
+}
+
+model TeamMember {
+  id       String   @id @default(cuid())
+  teamId   String
+  userId   String
+  joinedAt DateTime @default(now())
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
 }
 
 model School {

@@ -175,6 +175,8 @@ async function main() {
     data: {
       name: "SPPG Cilandak",
       address: "Jl. TB Simatupang No. 12, Cilandak, Jakarta Selatan",
+      lat: -6.2895,
+      lng: 106.8003,
     },
   });
 
@@ -515,7 +517,26 @@ async function main() {
     },
   });
 
-  console.log("Seeded SPPG Cilandak with demo users, lots, schools, menus, and delivery QR.");
+  const supervisor = await prisma.user.findUnique({ where: { email: "supervisor@sppg.local" } });
+  const teamUsers = await prisma.user.findMany({
+    where: { email: { in: ["supervisor@sppg.local", "dapur@sppg.local", "distributor@sppg.local"] } },
+    select: { id: true },
+  });
+  if (supervisor) {
+    await prisma.team.create({
+      data: {
+        name: "Tim Operasional Cilandak",
+        inviteCode: "CILAND",
+        sppgId: sppg.id,
+        createdById: supervisor.id,
+        members: {
+          create: teamUsers.map((u) => ({ userId: u.id })),
+        },
+      },
+    });
+  }
+
+  console.log("Seeded SPPG Cilandak with demo users, lots, schools, menus, teams, and delivery QR.");
   console.log(`Demo public QR path: /q/${qrToken}`);
 }
 

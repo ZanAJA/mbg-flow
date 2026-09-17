@@ -10,11 +10,13 @@ import {
   LayoutDashboard,
   Leaf,
   LogOut,
+  MapPinned,
   Menu,
   QrCode,
   ScrollText,
   Truck,
   Users,
+  UsersRound,
   UtensilsCrossed,
 } from "lucide-react";
 import { ApiError, apiFetch } from "@/shared/lib/api";
@@ -44,6 +46,8 @@ const NAV: Array<{
   { href: "/production", label: "Produksi", icon: CookingPot, roles: ["SUPERVISOR", "KITCHEN"] },
   { href: "/batches", label: "Batch", icon: ClipboardList, roles: ["SUPERVISOR", "KITCHEN", "DISTRIBUTOR"] },
   { href: "/distribution", label: "Distribusi", icon: Truck, roles: ["SUPERVISOR", "DISTRIBUTOR"] },
+  { href: "/schools", label: "Sekolah", icon: MapPinned, roles: ["SUPERVISOR"] },
+  { href: "/teams", label: "Tim", icon: UsersRound, roles: ["SUPERVISOR", "KITCHEN", "DISTRIBUTOR"] },
   { href: "/audit", label: "Audit", icon: ScrollText, roles: ["SUPERVISOR"] },
   { href: "/users", label: "Pengguna", icon: Users, roles: ["SUPERVISOR"] },
 ];

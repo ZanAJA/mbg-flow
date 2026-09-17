@@ -64,10 +64,10 @@ export function deriveSafetyStatus(
 
 export function formatRemaining(ms: number | null) {
   if (ms === null) return "--:--:--";
-  const sign = ms < 0 ? "-" : "";
-  const abs = Math.abs(ms);
+  // Never show negative countdown — freeze at 00:00:00 once the window ends.
+  const abs = Math.max(0, ms);
   const hours = Math.floor(abs / 3_600_000);
   const minutes = Math.floor((abs % 3_600_000) / 60_000);
   const seconds = Math.floor((abs % 60_000) / 1000);
-  return `${sign}${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }

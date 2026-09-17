@@ -3,6 +3,7 @@ import { prisma } from "@/shared/db/prisma";
 import { HttpError, writeAudit } from "@/shared/lib/http";
 import { componentSafeUntil, productionBatchSafeUntil } from "@/shared/safety/engine";
 import { deriveProductionStatus, etaFromDistanceKm, isAllocationValid } from "@/shared/domain/rules";
+import { distanceOrFallback } from "@/shared/lib/geo";
 
 export { deriveProductionStatus, etaFromDistanceKm, isAllocationValid };
 
@@ -190,7 +191,7 @@ export async function createAllocation(input: {
   if (input.portionQty <= 0) throw new HttpError(400, "Jumlah porsi harus lebih dari 0.");
   const batch = await prisma.productionBatch.findUnique({
     where: { id: input.productionBatchId },
-    include: { allocations: { include: { deliveryBatch: true } } },
+    include: { allocations: { include: { deliveryBatch: true } }, sppg: true },
   });
   if (!batch) throw new HttpError(404, "Production batch tidak ditemukan.");
   const school = await prisma.school.findUnique({ where: { id: input.schoolId } });
@@ -208,6 +209,7 @@ export async function createAllocation(input: {
     );
   }
 
+  const distanceKm = distanceOrFallback({ from: batch.sppg, to: school });
   const schoolIndex = batch.allocations.length + 1;
   const code = await nextDeliveryCode(batch.code, schoolIndex);
   const allocation = await prisma.schoolAllocation.create({
@@ -220,7 +222,7 @@ export async function createAllocation(input: {
         create: {
           code,
           status: "PLANNED",
-          etaMinutes: etaFromDistanceKm(school.distanceKm),
+          etaMinutes: etaFromDistanceKm(distanceKm),
           qrToken: randomUUID(),
         },
       },

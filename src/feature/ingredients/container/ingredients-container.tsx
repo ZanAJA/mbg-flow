@@ -38,12 +38,28 @@ type Lot = {
   ingredient: { id: string; name: string; category: string; unit: string };
 };
 
+type Ingredient = {
+  id: string;
+  name: string;
+  category: string;
+  unit: string;
+  lots?: unknown[];
+};
+
 const lotSchema = z.object({
-  ingredientId: z.string().min(1, "Pilih bahan"),
+  name: z.string().trim().min(2, "Nama bahan wajib diisi"),
+  category: z.string().trim().min(2, "Kategori wajib"),
+  unit: z.string().trim().min(1, "Satuan wajib"),
   quantity: z.coerce.number().positive(),
   expiryDate: z.string().min(4),
   storageType: z.string().min(2),
   supplier: z.string().min(2),
+});
+
+const ingredientSchema = z.object({
+  name: z.string().trim().min(2),
+  category: z.string().trim().min(2),
+  unit: z.string().trim().min(1),
 });
 
 type FefoFilter = "all" | "urgent" | "soon" | "ok";
@@ -54,6 +70,8 @@ const selectTriggerClass = "w-full min-w-0 overflow-hidden [&>span]:min-w-0 [&>s
 export function IngredientsContainer() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
+  const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [storage, setStorage] = useState("");
@@ -66,12 +84,15 @@ export function IngredientsContainer() {
   });
   const ingredients = useQuery({
     queryKey: ["ingredients"],
-    queryFn: () => apiFetch<Array<{ id: string; name: string }>>("/api/ingredients"),
+    queryFn: () => apiFetch<Ingredient[]>("/api/ingredients"),
   });
+
   const form = useForm({
     resolver: zodResolver(lotSchema),
     defaultValues: {
-      ingredientId: "",
+      name: "",
+      category: "Umum",
+      unit: "kg",
       quantity: 0,
       expiryDate: "",
       storageType: "Chiller 0-4°C",
@@ -79,20 +100,64 @@ export function IngredientsContainer() {
     },
   });
 
+  const ingredientForm = useForm({
+    resolver: zodResolver(ingredientSchema),
+    defaultValues: { name: "", category: "Umum", unit: "kg" },
+  });
+
   const createLot = useMutation({
     mutationFn: (values: z.infer<typeof lotSchema>) =>
       apiFetch("/api/ingredients/lots", { method: "POST", body: JSON.stringify(values) }),
     onSuccess: () => {
-      toast.success("Lot diterima. Kode lot digenerate otomatis.");
+      toast.success("Lot diterima. Bahan baru dibuat otomatis jika nama belum ada.");
       queryClient.invalidateQueries({ queryKey: ["lots"] });
       queryClient.invalidateQueries({ queryKey: ["ingredients"] });
       setOpen(false);
-      form.reset();
+      form.reset({
+        name: "",
+        category: "Umum",
+        unit: "kg",
+        quantity: 0,
+        expiryDate: "",
+        storageType: "Chiller 0-4°C",
+        supplier: "",
+      });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const saveIngredient = useMutation({
+    mutationFn: async (values: z.infer<typeof ingredientSchema>) => {
+      if (editingIngredient) {
+        return apiFetch(`/api/ingredients/${editingIngredient.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(values),
+        });
+      }
+      return apiFetch("/api/ingredients", { method: "POST", body: JSON.stringify(values) });
+    },
+    onSuccess: () => {
+      toast.success(editingIngredient ? "Bahan diperbarui" : "Bahan ditambahkan");
+      queryClient.invalidateQueries({ queryKey: ["ingredients"] });
+      queryClient.invalidateQueries({ queryKey: ["lots"] });
+      setManageOpen(false);
+      setEditingIngredient(null);
+      ingredientForm.reset({ name: "", category: "Umum", unit: "kg" });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const deleteIngredient = useMutation({
+    mutationFn: (id: string) => apiFetch(`/api/ingredients/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      toast.success("Bahan dihapus");
+      queryClient.invalidateQueries({ queryKey: ["ingredients"] });
     },
     onError: (error) => toast.error(error.message),
   });
 
   const rows = lots.data?.data ?? [];
+  const ingredientRows = ingredients.data?.data ?? [];
 
   const categoryOptions = useMemo(() => {
     return Array.from(new Set(rows.map((lot) => lot.ingredient.category))).sort();
@@ -128,12 +193,85 @@ export function IngredientsContainer() {
     setFefo("all");
   }
 
+  function openCreateIngredient() {
+    setEditingIngredient(null);
+    ingredientForm.reset({ name: "", category: "Umum", unit: "kg" });
+    setManageOpen(true);
+  }
+
+  function openEditIngredient(item: Ingredient) {
+    setEditingIngredient(item);
+    ingredientForm.reset({
+      name: item.name,
+      category: item.category,
+      unit: item.unit,
+    });
+    setManageOpen(true);
+  }
+
   return (
     <div className="min-w-0">
       <PageHeader
         title="Bahan baku & lot"
-        action={<Button onClick={() => setOpen(true)}>Catat lot baru</Button>}
+        action={
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={openCreateIngredient}>
+              Kelola bahan
+            </Button>
+            <Button onClick={() => setOpen(true)}>Catat lot baru</Button>
+          </div>
+        }
       />
+
+      <Card className="mb-4">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Daftar bahan</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {ingredientRows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Belum ada master bahan. Tambah lewat lot atau tombol Kelola bahan.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nama</TableHead>
+                  <TableHead>Kategori</TableHead>
+                  <TableHead>Satuan</TableHead>
+                  <TableHead className="w-40">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {ingredientRows.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell>{item.category}</TableCell>
+                    <TableCell>{item.unit}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button type="button" size="sm" variant="ghost" onClick={() => openEditIngredient(item)}>
+                          Edit
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive"
+                          onClick={() => {
+                            if (confirm(`Hapus bahan ${item.name}?`)) deleteIngredient.mutate(item.id);
+                          }}
+                        >
+                          Hapus
+                        </Button>
+                        <ActionLink href={`/ingredients/${item.id}`} label={`Lot ${item.name}`} />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       {rows.length > 0 ? (
         <Card className="mb-4">
@@ -221,7 +359,7 @@ export function IngredientsContainer() {
         {rows.length === 0 ? (
           <EmptyState
             title="Belum ada lot"
-            description="Catat penerimaan bahan pertama."
+            description="Catat penerimaan bahan pertama — ketik nama bahan langsung."
             actionLabel="Catat lot"
             onAction={() => setOpen(true)}
           />
@@ -293,7 +431,7 @@ export function IngredientsContainer() {
       </QueryState>
 
       {open ? (
-        <div className="fixed inset-0 z-0 flex items-center justify-center bg-black/40 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <Card className="w-full max-w-lg bg-background">
             <CardHeader>
               <CardTitle>Penerimaan lot</CardTitle>
@@ -301,25 +439,26 @@ export function IngredientsContainer() {
             <CardContent>
               <form className="space-y-3" onSubmit={form.handleSubmit((values) => createLot.mutate(values))}>
                 <div className="space-y-1">
-                  <Label>Bahan</Label>
-                  <Controller
-                    control={form.control}
-                    name="ingredientId"
-                    render={({ field }) => (
-                      <Select value={field.value || undefined} onValueChange={field.onChange}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Pilih bahan" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(ingredients.data?.data ?? []).map((item) => (
-                            <SelectItem key={item.id} value={item.id}>
-                              {item.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
+                  <Label>Nama bahan</Label>
+                  <Input placeholder="Contoh: Dada ayam" list="ingredient-names" {...form.register("name")} />
+                  <datalist id="ingredient-names">
+                    {ingredientRows.map((item) => (
+                      <option key={item.id} value={item.name} />
+                    ))}
+                  </datalist>
+                  {form.formState.errors.name ? (
+                    <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
+                  ) : null}
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label>Kategori</Label>
+                    <Input placeholder="Protein / Sayur" {...form.register("category")} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Satuan</Label>
+                    <Input placeholder="kg / butir / L" {...form.register("unit")} />
+                  </div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1">
@@ -351,13 +490,59 @@ export function IngredientsContainer() {
                     <Input {...form.register("supplier")} />
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">Kode lot digenerate otomatis saat disimpan.</p>
+                <p className="text-xs text-muted-foreground">
+                  Nama bahan diketik bebas. Jika belum ada di master, otomatis dibuat.
+                </p>
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                     Batal
                   </Button>
                   <Button type="submit" disabled={createLot.isPending}>
                     Simpan lot
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+
+      {manageOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <Card className="w-full max-w-md bg-background">
+            <CardHeader>
+              <CardTitle>{editingIngredient ? "Edit bahan" : "Tambah bahan"}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form
+                className="space-y-3"
+                onSubmit={ingredientForm.handleSubmit((values) => saveIngredient.mutate(values))}
+              >
+                <div className="space-y-1">
+                  <Label>Nama</Label>
+                  <Input {...ingredientForm.register("name")} />
+                </div>
+                <div className="space-y-1">
+                  <Label>Kategori</Label>
+                  <Input {...ingredientForm.register("category")} />
+                </div>
+                <div className="space-y-1">
+                  <Label>Satuan</Label>
+                  <Input {...ingredientForm.register("unit")} />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setManageOpen(false);
+                      setEditingIngredient(null);
+                    }}
+                  >
+                    Batal
+                  </Button>
+                  <Button type="submit" disabled={saveIngredient.isPending}>
+                    Simpan
                   </Button>
                 </div>
               </form>

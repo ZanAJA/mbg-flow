@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   componentSafeUntil,
   deriveSafetyStatus,
+  formatRemaining,
   productionBatchSafeUntil,
 } from "@/shared/safety/engine";
 
@@ -47,7 +48,7 @@ describe("food safety rule engine", () => {
     expect(batchUntil?.toISOString()).toBe(new Date("2026-09-15T09:55:00+07:00").toISOString());
   });
 
-  it("keeps countdown running after receive and switches to PAST_LIMIT", () => {
+  it("switches to PAST_LIMIT after deadline and never formats negative time", () => {
     const safeUntil = new Date("2026-09-15T09:55:00+07:00");
     const before = new Date("2026-09-15T08:10:00+07:00");
     const warning = new Date("2026-09-15T09:20:00+07:00");
@@ -56,5 +57,8 @@ describe("food safety rule engine", () => {
     expect(deriveSafetyStatus(safeUntil, before)).toBe("SAFE");
     expect(deriveSafetyStatus(safeUntil, warning)).toBe("WARNING");
     expect(deriveSafetyStatus(safeUntil, after)).toBe("PAST_LIMIT");
+    expect(formatRemaining(-65_000)).toBe("00:00:00");
+    expect(formatRemaining(65_000)).toBe("00:01:05");
   });
 });
+

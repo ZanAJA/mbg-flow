@@ -17,36 +17,55 @@ export function Countdown({
   serverNow,
   className,
   size = "md",
+  received = false,
 }: {
   safeUntil: string | Date | null;
   serverNow: string;
   className?: string;
   size?: keyof typeof SIZES;
+  /** When true and timer already expired, freeze display (no further ticks). */
+  received?: boolean;
 }) {
   const [now, setNow] = useState(() => new Date(serverNow).getTime());
   const dim = SIZES[size];
   const radius = (dim.size - dim.stroke) / 2;
   const circumference = 2 * Math.PI * radius;
 
+  const initialRemaining = remainingMs(safeUntil, new Date(serverNow));
+  const alreadyExpired = initialRemaining !== null && initialRemaining <= 0;
+
   useEffect(() => {
+    if (alreadyExpired) {
+      setNow(new Date(serverNow).getTime());
+      return;
+    }
     const origin = Date.now();
     const serverOrigin = new Date(serverNow).getTime();
-    const tick = () => setNow(serverOrigin + (Date.now() - origin));
+    const tick = () => {
+      const next = serverOrigin + (Date.now() - origin);
+      const rem = remainingMs(safeUntil, new Date(next));
+      setNow(next);
+      // Stop ticking once we hit zero — avoid negative countdown.
+      if (rem !== null && rem <= 0) {
+        clearInterval(id);
+      }
+    };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [serverNow]);
+  }, [serverNow, safeUntil, alreadyExpired]);
 
   const current = new Date(now);
   const remaining = remainingMs(safeUntil, current);
+  const clampedRemaining = remaining === null ? null : Math.max(0, remaining);
   const status = deriveSafetyStatus(safeUntil, current);
 
   const progress =
-    remaining === null
+    clampedRemaining === null
       ? 0
-      : remaining <= 0
+      : clampedRemaining <= 0
         ? 0
-        : Math.min(1, remaining / TOTAL_MS);
+        : Math.min(1, clampedRemaining / TOTAL_MS);
 
   const tone =
     status === "SAFE"
@@ -61,7 +80,9 @@ export function Countdown({
     status === "PENDING"
       ? "Menunggu"
       : status === "PAST_LIMIT"
-        ? "Lewat"
+        ? received
+          ? "Selesai"
+          : "Lewat"
         : status === "WARNING"
           ? "Waspada"
           : "Aman";
@@ -93,7 +114,7 @@ export function Countdown({
         </svg>
         <div className={cn("absolute inset-0 flex flex-col items-center justify-center", tone.text)}>
           <p className={cn("font-mono font-semibold tabular-nums tracking-tight", dim.time)}>
-            {remaining === null ? "--:--:--" : formatRemaining(remaining)}
+            {clampedRemaining === null ? "--:--:--" : formatRemaining(clampedRemaining)}
           </p>
           <p className={cn("mt-0.5 font-medium uppercase tracking-wide opacity-70", dim.label)}>{label}</p>
         </div>
