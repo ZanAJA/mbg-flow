@@ -65,8 +65,8 @@ export function MenuDetailContainer() {
       <QueryState isLoading={query.isLoading} error={query.error} onRetry={() => query.refetch()}>
         {menu ? (
           <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-            <Card className="overflow-hidden py-0">
-              <div className="aspect-[2/1] max-h-56 bg-muted">
+            <Card className="overflow-hidden pt-0">
+              <div className="aspect-2/1 max-h-56 bg-muted">
                 <img
                   src={menuCoverUrl(menu.name)}
                   alt={menu.name}

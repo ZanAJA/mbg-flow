@@ -202,7 +202,7 @@ export function LoginContainer() {
           alt="Dapur SPPG menyiapkan makanan bergizi"
           className="absolute inset-0 size-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0b1f3a]/92 via-[#0b1f3a]/55 to-[#0b1f3a]/25" />
+        <div className="absolute inset-0 bg-linear-to-t from-[#0b1f3a]/92 via-[#0b1f3a]/55 to-[#0b1f3a]/25" />
         <div className="relative z-10 flex h-full min-h-[40vh] flex-col justify-between p-6 text-white sm:min-h-screen sm:p-10">
           <p className="text-sm font-semibold tracking-[0.28em] uppercase">MBG SPPG</p>
           <div className="max-w-md space-y-3">

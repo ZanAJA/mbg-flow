@@ -1,186 +1,395 @@
 import { prisma } from "@/shared/db/prisma";
 import { HttpError } from "@/shared/lib/http";
-import { openai } from "@ai-sdk/openai";
+import { google } from "@ai-sdk/google";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 
-type RecipeItem = { name: string; qtyPer100: number; unit: string };
-type Recipe = { porsiDasar: number; langkah: string[]; bahan: RecipeItem[] };
-type RankedMenu = Awaited<ReturnType<typeof rankMenusFromCatalog>>["items"][number];
+type RecipeItem = {
+  name: string;
+  qtyPer100: number;
+  unit: string;
+};
+
+type Recipe = {
+  porsiDasar: number;
+  langkah: string[];
+  bahan: RecipeItem[];
+};
 
 export type MenuRecommendationInput = {
-  mainIngredients: { name: string; quantity: number }[];
+  mainIngredients: {
+    name: string;
+    quantity: number;
+  }[];
   targetPortions: number;
 };
 
-const aiRecommendationSchema = z.object({
-  items: z.array(
-    z.object({
-      menuId: z.string(),
-      score: z.number().min(0).max(100),
-      rationale: z.array(z.string()).min(1),
-    }),
-  ),
-  note: z.string(),
+const aiGeneratedMenuSchema = z.object({
+  menus: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        durabilityCategory: z.enum([
+          "LEBIH_TAHAN",
+          "SEDANG",
+          "LEBIH_CEPAT_RUSAK",
+        ]),
+
+        durabilityNote: z.string().min(1),
+
+        components: z.array(
+          z.object({
+            key: z.string().min(1),
+            name: z.string().min(1),
+          }),
+        ),
+
+        recipe: z.object({
+          porsiDasar: z.number().positive(),
+
+          bahan: z
+            .array(
+              z.object({
+                name: z.string().min(1),
+                qtyPer100: z.number().nonnegative(),
+                unit: z.string().min(1),
+              }),
+            )
+            .min(1),
+
+          langkah: z
+            .array(z.string().min(1))
+            .min(1),
+        }),
+
+        rationale: z
+          .array(z.string().min(1))
+          .min(1),
+      }),
+    )
+    .min(3)
+    .max(5),
+
+  note: z.string().min(1),
 });
 
-async function rankMenusFromCatalog(input: MenuRecommendationInput) {
-  const menus = await prisma.menu.findMany();
-  const lots = await prisma.ingredientLot.findMany({ include: { ingredient: true } });
-  const stockByName = new Map<string, number>();
-  const nearestExpiry = new Map<string, Date>();
+type GeneratedMenu = z.infer<typeof aiGeneratedMenuSchema>["menus"][number];
 
-  for (const lot of lots) {
-    const name = lot.ingredient.name.toLowerCase();
-    stockByName.set(name, (stockByName.get(name) ?? 0) + lot.quantity);
-    const current = nearestExpiry.get(name);
-    if (!current || lot.expiryDate < current) nearestExpiry.set(name, lot.expiryDate);
-  }
+type MenuCandidate = GeneratedMenu & {
+  durabilityRank: number;
+  needs: Array<{
+    name: string;
+    required: number;
+    available: number;
+    unit: string;
+    shortage: number;
+  }>;
+};
 
-  const requested = input.mainIngredients.map((i) => i.name.toLowerCase());
-
-  const ranked = menus
-    .map((menu) => {
-      const recipe = JSON.parse(menu.recipeJson) as Recipe;
-      const scale = input.targetPortions / (recipe.porsiDasar || 100);
-      const needs = recipe.bahan.map((bahan) => {
-        const required = Number((bahan.qtyPer100 * scale).toFixed(2));
-        const available = stockByName.get(bahan.name.toLowerCase()) ?? 0;
-        return {
-          name: bahan.name,
-          unit: bahan.unit,
-          required,
-          available,
-          shortage: Math.max(0, Number((required - available).toFixed(2))),
-        };
-      });
-
-      const coverage =
-        needs.length === 0
-          ? 0
-          : needs.filter((n) => n.available >= n.required).length / needs.length;
-      const requestedHits = requested.filter((name) =>
-        needs.some((n) => n.name.toLowerCase().includes(name) || name.includes(n.name.toLowerCase())),
-      ).length;
-      const fefoBoost = needs.reduce((score, need) => {
-        const expiry = nearestExpiry.get(need.name.toLowerCase());
-        if (!expiry) return score;
-        const days = (expiry.getTime() - Date.now()) / 86_400_000;
-        if (days <= 2) return score + 8;
-        if (days <= 5) return score + 4;
-        return score;
-      }, 0);
-
-      const score = coverage * 70 + requestedHits * 12 + fefoBoost;
-      return {
-        menuId: menu.id,
-        name: menu.name,
-        source: menu.source,
-        score: Number(score.toFixed(1)),
-        durabilityNote: menu.durabilityNote,
-        recipe,
-        needs,
-        components: JSON.parse(menu.recommendedComponents) as {
-          key: string;
-          name: string;
-          sortOrder: number;
-        }[],
-        rationale: [
-          requestedHits > 0
-            ? `Cocok dengan bahan utama yang dipilih (${requestedHits} kecocokan).`
-            : "Tidak memakai semua bahan utama yang dipilih, tetap bisa diproduksi dari stok lain.",
-          coverage >= 1
-            ? "Stok saat ini mencukupi seluruh kebutuhan resep."
-            : "Ada bahan yang kurang; lengkapi lot sebelum produksi penuh.",
-          fefoBoost > 0
-            ? "Memakai lot yang mendekati expiry, selaras prinsip FEFO."
-            : "Tidak ada tekanan expiry mendesak pada bahan menu ini.",
-          menu.durabilityNote,
-        ],
-      };
-    })
-    .sort((a, b) => b.score - a.score);
-
-  return {
-    generatedAt: new Date().toISOString(),
-    targetPortions: input.targetPortions,
-    engine: "constrained-catalog-ranker",
-    note: "Peringkat menu dihasilkan dari katalog + stok. Batas aman konsumsi tidak berasal dari peringkat ini; rule engine tervalidasi yang menetapkan safe_until.",
-    items: ranked,
-  };
+function normalizeName(value: string) {
+  return value.trim().toLowerCase();
 }
 
-async function rankMenusWithAi(input: MenuRecommendationInput, candidates: RankedMenu[]) {
+function getDurabilityRank(
+  category: GeneratedMenu["durabilityCategory"],
+) {
+  switch (category) {
+    case "LEBIH_TAHAN":
+      return 3;
+
+    case "SEDANG":
+      return 2;
+
+    case "LEBIH_CEPAT_RUSAK":
+      return 1;
+  }
+}
+
+async function getStockSnapshot() {
+  const lots = await prisma.ingredientLot.findMany({
+    include: {
+      ingredient: true,
+    },
+  });
+
+  const stockByName = new Map<string, number>();
+
+  for (const lot of lots) {
+    const name = normalizeName(
+      lot.ingredient.name,
+    );
+
+    stockByName.set(
+      name,
+      (stockByName.get(name) ?? 0) +
+        Number(lot.quantity),
+    );
+  }
+
+  return stockByName;
+}
+
+function calculateNeeds(
+  recipe: Recipe,
+  targetPortions: number,
+  stockByName: Map<string, number>,
+) {
+  const scale = targetPortions / (recipe.porsiDasar || 100);
+  return recipe.bahan.map((bahan) => {
+    const required = Number(
+      (
+        bahan.qtyPer100 * scale
+      ).toFixed(2),
+    );
+
+    const available = Number(
+      stockByName.get(
+        normalizeName(bahan.name),
+      ) ?? 0,
+    );
+
+    const shortage = Math.max(
+      0,
+      Number(
+        (required - available).toFixed(2),
+      ),
+    );
+
+    return {
+      name: bahan.name,
+      required,
+      available,
+      unit: bahan.unit,
+      shortage,
+    };
+  });
+}
+
+async function generateMenusWithAi(
+  input: MenuRecommendationInput,
+) {
   const { output } = await generateText({
-    model: openai(process.env.AI_MENU_MODEL || "gpt-5-mini"),
+    model: google(process.env.AI_MENU_MODEL || "gemini-3.7-flash-lite",),
     output: Output.object({
-      schema: aiRecommendationSchema,
+      schema: aiGeneratedMenuSchema,
     }),
     system: [
-      "You are the production AI for an Indonesian SPPG school-meal kitchen.",
-      "Rank the supplied menu candidates for today's cook based on stock coverage, FEFO urgency, requested main ingredients, and operational practicality.",
-      "Only use menuId values from the supplied candidates. Never invent recipes, safety rules, stock quantities, or deadlines.",
-      "Safety deadlines (safe_until) are owned by a separate validated rule engine — do not invent them.",
-      "Write note and every rationale bullet in clear Bahasa Indonesia for kitchen supervisors.",
-      "Score 0-100. Prefer menus that use near-expiry lots and cover requested ingredients without large shortages.",
+      "You are an AI menu planner for an Indonesian SPPG school-meal kitchen.",
+      "Generate 5-10 practical Indonesian school-meal menu candidates from the supplied main ingredients.",
+      "Every menu must contain a complete recipe include carbohydrates, proteins, vegetables, fruits, and healthy fats.",
+      "Every recipe must contain ingredients with quantities per 100 portions and cooking steps.",
+      "Use the supplied main ingredients whenever they are appropriate for the menu.",
+      "Recipes must be realistic for large-scale SPPG kitchen production.",
+      "Classify the general durability characteristic of the finished food into exactly one of: LEBIH_TAHAN, SEDANG, or LEBIH_CEPAT_RUSAK.",
+      "LEBIH_TAHAN means the finished food generally has characteristics that make it less prone to rapid quality deterioration compared with the other generated candidates.",
+      "SEDANG means moderate durability characteristics.",
+      "LEBIH_CEPAT_RUSAK means the finished food generally deteriorates more quickly compared with the other generated candidates.",
+      "Do not provide exact safe consumption hours.",
+      "Do not provide safe_until timestamps.",
+      "Do not claim that a menu is food-safe for a specific duration.",
+      "Do not invent current stock quantities.",
+      "Do not calculate inventory availability.",
+      "Write all output in clear Bahasa Indonesia.",
+      "Do not use markdown.",
     ].join(" "),
     prompt: JSON.stringify({
       targetPortions: input.targetPortions,
       requestedIngredients: input.mainIngredients,
-      candidates: candidates.map((candidate) => ({
-        menuId: candidate.menuId,
-        name: candidate.name,
-        catalogScore: candidate.score,
-        durabilityNote: candidate.durabilityNote,
-        needs: candidate.needs,
-        currentRationale: candidate.rationale,
-      })),
+      requirements: [
+        "Buat 5-10 menu berbeda dari bahan utama input.",
+        "Setiap menu harus memiliki resep lengkap termasuk Karbohidrat, Protein & Nabati, Sayuran, Buah-buahan, Sedikit Lemak Sehat.",
+        "Setiap resep harus memiliki bahan, jumlah per 100 porsi, dan langkah memasak.",
+        "Gunakan bahan utama dari input jika sesuai.",
+        "Menu harus realistis untuk produksi MBG di SPPG.",
+        "Klasifikasikan ketahanan makanan secara relatif.",
+      ],
     }),
   });
 
-  const byMenuId = new Map(candidates.map((candidate) => [candidate.menuId, candidate]));
-  const aiItems = output.items
-    .map((item) => {
-      const candidate = byMenuId.get(item.menuId);
-      if (!candidate) return null;
-      return {
-        ...candidate,
-        score: Number(item.score.toFixed(1)),
-        rationale: item.rationale,
-      };
-    })
-    .filter((item): item is RankedMenu => item !== null);
-
-  const included = new Set(aiItems.map((item) => item.menuId));
-  const remaining = candidates.filter((candidate) => !included.has(candidate.menuId));
-
-  return {
-    generatedAt: new Date().toISOString(),
-    targetPortions: input.targetPortions,
-    engine: "vercel-ai-sdk-openai-structured-output",
-    note: output.note,
-    items: [...aiItems, ...remaining],
-  };
+  return output;
 }
 
-export async function recommendMenus(input: MenuRecommendationInput) {
-  if (!process.env.OPENAI_API_KEY?.trim()) {
+function enrichGeneratedMenus(
+  menus: GeneratedMenu[],
+  targetPortions: number,
+  stockByName: Map<string, number>,
+): MenuCandidate[] {
+  return menus.map((menu) => {
+    const recipe =
+      menu.recipe as Recipe;
+
+    const needs = calculateNeeds(
+      recipe,
+      targetPortions,
+      stockByName,
+    );
+
+    return {
+      ...menu,
+
+      durabilityRank:
+        getDurabilityRank(
+          menu.durabilityCategory,
+        ),
+
+      needs,
+    };
+  });
+}
+
+function rankGeneratedMenus(
+  menus: MenuCandidate[],
+) {
+  return [...menus].sort(
+    (a, b) => {
+      if (
+        b.durabilityRank !==
+        a.durabilityRank
+      ) {
+        return (
+          b.durabilityRank -
+          a.durabilityRank
+        );
+      }
+
+      const shortageA =
+        a.needs.reduce(
+          (total, item) =>
+            total + item.shortage,
+          0,
+        );
+
+      const shortageB =
+        b.needs.reduce(
+          (total, item) =>
+            total + item.shortage,
+          0,
+        );
+
+      return shortageA - shortageB;
+    },
+  );
+}
+
+async function saveGeneratedMenus(
+  menus: MenuCandidate[],
+) {
+  return prisma.$transaction(
+    menus.map((menu) =>
+      prisma.menu.create({
+        data: {
+          name: menu.name,
+          source: "AI",
+          durabilityNote: menu.durabilityNote,
+          recipeJson: JSON.stringify(
+            menu.recipe,
+          ),
+          recommendedComponents:
+            JSON.stringify(
+              menu.components.map(
+                (component, index) => ({
+                  ...component,
+                  sortOrder: index,
+                }),
+              ),
+            ),
+        },
+      }),
+    ),
+  );
+}
+
+export async function recommendMenus(
+  input: MenuRecommendationInput,
+) {
+  if (
+    !process.env
+      .GOOGLE_GENERATIVE_AI_API_KEY
+      ?.trim()
+  ) {
     throw new HttpError(
       503,
-      "OPENAI_API_KEY belum dikonfigurasi. Isi kunci OpenAI di file .env untuk memakai rekomendasi AI asli.",
+      "GOOGLE_GENERATIVE_AI_API_KEY belum dikonfigurasi.",
     );
   }
 
-  const catalogSnapshot = await rankMenusFromCatalog(input);
+  if (
+    !input.targetPortions ||
+    input.targetPortions <= 0
+  ) {
+    throw new HttpError(
+      400,
+      "Target porsi harus lebih dari 0.",
+    );
+  }
+
+  if (
+    !input.mainIngredients?.length
+  ) {
+    throw new HttpError(
+      400,
+      "Minimal satu bahan utama harus diberikan.",
+    );
+  }
 
   try {
-    return await rankMenusWithAi(input, catalogSnapshot.items);
+    const stockByName = await getStockSnapshot();
+    const generated = await generateMenusWithAi(input);
+    const enriched = enrichGeneratedMenus(
+        generated.menus,
+        input.targetPortions,
+        stockByName,
+      );
+    const ranked = rankGeneratedMenus(enriched,);
+    const savedMenus = await saveGeneratedMenus(ranked,);
+    const items = ranked.map(
+      (menu, index) => {
+        const savedMenu =
+          savedMenus[index];
+
+        return {
+          menuId: savedMenu.id,
+          rank: index + 1,
+          name: savedMenu.name,
+          durabilityCategory: menu.durabilityCategory,
+          durabilityRank: menu.durabilityRank,
+          durabilityNote: savedMenu.durabilityNote,
+          recipe: menu.recipe,
+          components: menu.components,
+          needs: menu.needs,
+          rationale: menu.rationale,
+        };
+      },
+    );
+
+    return {
+      generatedAt: new Date().toISOString(),
+      targetPortions: input.targetPortions,
+      engine: "gemini-menu-generator-durability-ranker",
+      note:
+        "AI menghasilkan menu dan resep.",
+      items,
+    };
   } catch (error) {
-    console.error("AI menu recommendation failed.", error);
-    const detail = error instanceof Error ? error.message : "unknown error";
+    console.error(
+      "AI menu generation failed.",
+      error,
+    );
+
+    if (
+      error instanceof HttpError
+    ) {
+      throw error;
+    }
+
+    const detail =
+      error instanceof Error
+        ? error.message
+        : "unknown error";
+
     throw new HttpError(
       502,
-      `Rekomendasi AI gagal (${detail}). Periksa OPENAI_API_KEY, model AI_MENU_MODEL, dan kuota OpenAI.`,
+      `Generate menu AI gagal (${detail}).`,
     );
   }
 }

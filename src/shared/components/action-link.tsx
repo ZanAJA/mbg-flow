@@ -64,7 +64,7 @@ export function NavCard({
 }) {
   return (
     <Link href={href} aria-label={label} className={cn("block", className)}>
-      <Card size="sm" className="transition-colors hover:bg-muted/40">
+      <Card size="default" className="transition-colors hover:bg-muted/40">
         <CardContent className="flex items-center gap-3">
           <div className="min-w-0 flex-1">{children}</div>
           <span

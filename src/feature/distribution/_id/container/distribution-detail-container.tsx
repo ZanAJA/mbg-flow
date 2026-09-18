@@ -62,7 +62,7 @@ export function DistributionDetailContainer() {
   const start = useMutation({
     mutationFn: () => apiFetch(`/api/delivery-batches/${params.id}/start`, { method: "POST", body: "{}" }),
     onSuccess: () => {
-      toast.success("Pengiriman berangkat. Countdown aman tetap berjalan.");
+      toast.success("Pengiriman berangkat.");
       invalidate();
     },
     onError: (error) => toast.error(error.message),
@@ -70,7 +70,7 @@ export function DistributionDetailContainer() {
   const receive = useMutation({
     mutationFn: () => apiFetch(`/api/delivery-batches/${params.id}/receive`, { method: "POST", body: "{}" }),
     onSuccess: () => {
-      toast.success("Diterima sekolah. Countdown berhenti di 00:00:00 jika batas aman sudah habis.");
+      toast.success("Diterima sekolah.");
       invalidate();
     },
     onError: (error) => toast.error(error.message),

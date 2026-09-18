@@ -109,7 +109,7 @@ export function IngredientsContainer() {
     mutationFn: (values: z.infer<typeof lotSchema>) =>
       apiFetch("/api/ingredients/lots", { method: "POST", body: JSON.stringify(values) }),
     onSuccess: () => {
-      toast.success("Lot diterima. Bahan baru dibuat otomatis jika nama belum ada.");
+      toast.success("Lot diterima.");
       queryClient.invalidateQueries({ queryKey: ["lots"] });
       queryClient.invalidateQueries({ queryKey: ["ingredients"] });
       setOpen(false);
@@ -222,56 +222,6 @@ export function IngredientsContainer() {
           </div>
         }
       />
-
-      <Card className="mb-4">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Daftar bahan</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {ingredientRows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Belum ada master bahan. Tambah lewat lot atau tombol Kelola bahan.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nama</TableHead>
-                  <TableHead>Kategori</TableHead>
-                  <TableHead>Satuan</TableHead>
-                  <TableHead className="w-40">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {ingredientRows.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell>{item.category}</TableCell>
-                    <TableCell>{item.unit}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button type="button" size="sm" variant="ghost" onClick={() => openEditIngredient(item)}>
-                          Edit
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className="text-destructive"
-                          onClick={() => {
-                            if (confirm(`Hapus bahan ${item.name}?`)) deleteIngredient.mutate(item.id);
-                          }}
-                        >
-                          Hapus
-                        </Button>
-                        <ActionLink href={`/ingredients/${item.id}`} label={`Lot ${item.name}`} />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
 
       {rows.length > 0 ? (
         <Card className="mb-4">
@@ -550,6 +500,56 @@ export function IngredientsContainer() {
           </Card>
         </div>
       ) : null}
+
+      <Card className="mt-4">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Daftar bahan</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {ingredientRows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Belum ada master bahan. Tambah lewat lot atau tombol Kelola bahan.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nama</TableHead>
+                  <TableHead>Kategori</TableHead>
+                  <TableHead>Satuan</TableHead>
+                  <TableHead className="w-40">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {ingredientRows.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell>{item.category}</TableCell>
+                    <TableCell>{item.unit}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button type="button" size="sm" variant="ghost" onClick={() => openEditIngredient(item)}>
+                          Edit
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive"
+                          onClick={() => {
+                            if (confirm(`Hapus bahan ${item.name}?`)) deleteIngredient.mutate(item.id);
+                          }}
+                        >
+                          Hapus
+                        </Button>
+                        <ActionLink href={`/ingredients/${item.id}`} label={`Lot ${item.name}`} />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

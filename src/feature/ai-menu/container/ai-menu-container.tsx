@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -17,79 +17,200 @@ import { Label } from "@/shared/components/ui/label";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 
+const STORAGE_KEY = "mbg-ai-menu-recommendations";
 const schema = z.object({
   ingredientsText: z.string().min(3, "Isi bahan utama"),
   targetPortions: z.coerce.number().int().positive(),
 });
 
 type Recommendation = {
+  generatedAt: string;
+  targetPortions: number;
   engine: string;
   note: string;
   items: Array<{
     menuId: string;
+    rank: number;
     name: string;
-    score: number;
+    durabilityCategory:
+      | "LEBIH_TAHAN"
+      | "SEDANG"
+      | "LEBIH_CEPAT_RUSAK";
+    durabilityRank: number;
     durabilityNote: string;
+    recipe: {
+      porsiDasar: number;
+      bahan: Array<{
+        name: string;
+        qtyPer100: number;
+        unit: string;
+      }>;
+      langkah: string[];
+    };
+    components: Array<{
+      key: string;
+      name: string;
+    }>;
+    needs: Array<{
+      name: string;
+      required: number;
+      available: number;
+      unit: string;
+      shortage: number;
+    }>;
     rationale: string[];
-    needs: Array<{ name: string; required: number; available: number; unit: string; shortage: number }>;
   }>;
 };
 
 function engineLabel(engine: string) {
-  if (engine.includes("openai") || engine.includes("vercel-ai")) return "OpenAI";
-  return engine;
+  if (engine.includes("openai")) {
+    return "OpenAI";
+  }
+
+  return "AI";
+}
+
+function durabilityLabel(rank: number) {
+  if (rank >= 3) {
+    return "Lebih tahan";
+  }
+
+  if (rank === 2) {
+    return "Ketahanan sedang";
+  }
+
+  return "Lebih cepat rusak";
 }
 
 export function AiMenuContainer() {
   const [result, setResult] = useState<Recommendation | null>(null);
   const form = useForm({
     resolver: zodResolver(schema),
-    defaultValues: { ingredientsText: "ayam, beras, wortel", targetPortions: 800 },
+    defaultValues: {
+      ingredientsText: "ayam, beras, wortel",
+      targetPortions: 800,
+    },
   });
 
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem(STORAGE_KEY);
+
+      if (!stored) {
+        return;
+      }
+
+      const parsed = JSON.parse(stored) as Recommendation;
+
+      const hasValidMenuIds =
+        Array.isArray(parsed?.items) &&
+        parsed.items.length > 0 &&
+        parsed.items.every(
+          (item) =>
+            typeof item.menuId === "string" &&
+            item.menuId.length > 0,
+        );
+
+      if (hasValidMenuIds) {
+        setResult(parsed);
+      } else {
+        sessionStorage.removeItem(STORAGE_KEY);
+      }
+    } catch (error) {
+      console.error(
+        "Failed to restore AI menu recommendation.",
+        error,
+      );
+
+      sessionStorage.removeItem(STORAGE_KEY);
+    }
+  }, []);
+
   const generate = useMutation({
-    mutationFn: async (values: z.infer<typeof schema>) => {
+    mutationFn: async (
+      values: z.infer<typeof schema>,
+    ) => {
       const mainIngredients = values.ingredientsText
         .split(",")
         .map((name) => name.trim())
         .filter(Boolean)
-        .map((name) => ({ name, quantity: 0 }));
-      return apiFetch<Recommendation>("/api/ai/menu-recommendations", {
-        method: "POST",
-        body: JSON.stringify({ mainIngredients, targetPortions: values.targetPortions }),
-      });
+        .map((name) => ({
+          name,
+          quantity: 0,
+        }));
+
+      return apiFetch<Recommendation>(
+        "/api/ai/menu-recommendations",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mainIngredients,
+            targetPortions: values.targetPortions,
+          }),
+        },
+      );
     },
+
     onSuccess: (payload) => {
       setResult(payload.data);
-      toast.success("Peringkat menu dari AI siap.");
+      sessionStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(payload.data),
+      );
+
+      toast.success(
+        "Menu dan resep berhasil dibuat oleh AI.",
+      );
     },
-    onError: (error) => toast.error(error.message),
+
+    onError: (error) => {
+      toast.error(error.message);
+    },
   });
 
   return (
     <div>
       <PageHeader title="Rekomendasi menu" />
       <p className="mb-4 -mt-4 text-sm text-muted-foreground">
-        Peringkat disusun oleh model OpenAI dari katalog + stok aktual.
+        AI membuat beberapa menu beserta resep, lalu sistem
+        mengurutkannya berdasarkan ketahanan makanan.
       </p>
       <Card className="mb-6">
         <CardContent>
           <form
             className="grid gap-4 md:grid-cols-[1fr_160px_auto]"
-            onSubmit={form.handleSubmit((v) => generate.mutate(v))}
+            onSubmit={form.handleSubmit((values) =>
+              generate.mutate(values),
+            )}
           >
             <div className="space-y-1">
               <Label>Bahan utama</Label>
-              <Input placeholder="ayam, beras, wortel" {...form.register("ingredientsText")} />
+
+              <Input
+                placeholder="ayam, beras, wortel"
+                {...form.register("ingredientsText")}
+              />
             </div>
+
             <div className="space-y-1">
               <Label>Target porsi</Label>
-              <Input type="number" {...form.register("targetPortions")} />
+
+              <Input
+                type="number"
+                {...form.register("targetPortions")}
+              />
             </div>
+
             <div className="flex items-end">
-              <Button type="submit" disabled={generate.isPending}>
+              <Button
+                type="submit"
+                disabled={generate.isPending}
+              >
                 <Sparkles className="size-3.5" />
-                {generate.isPending ? "Memanggil AI..." : "Buat peringkat AI"}
+
+                {generate.isPending
+                  ? "Generate menu..."
+                  : "Generate menu AI"}
               </Button>
             </div>
           </form>
@@ -97,19 +218,33 @@ export function AiMenuContainer() {
       </Card>
 
       {!result ? (
-        <EmptyState title="Belum ada rekomendasi" description="Isi bahan dan target porsi, lalu panggil AI." />
+        <EmptyState
+          title="Belum ada menu"
+          description="Isi bahan utama dan target porsi, lalu generate menu dengan AI."
+        />
       ) : (
         <div className="space-y-4">
           <div className="flex flex-wrap items-start gap-2">
-            <Badge variant="secondary" className="gap-1">
+            <Badge
+              variant="secondary"
+              className="gap-1"
+            >
               <Sparkles className="size-3" />
               {engineLabel(result.engine)}
             </Badge>
-            <p className="max-w-3xl text-sm text-muted-foreground">{result.note}</p>
+
+            <p className="max-w-3xl text-sm text-muted-foreground">
+              {result.note}
+            </p>
           </div>
+
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-            {result.items.map((item, index) => (
-              <Link key={item.menuId} href={`/menus/${item.menuId}`} className="group block">
+            {result.items.map((item) => (
+              <Link
+                key={item.menuId}
+                href={`/menus/${item.menuId}`}
+                className="group block"
+              >
                 <Card className="overflow-hidden py-0 transition-shadow group-hover:shadow-md">
                   <div className="relative aspect-5/3 overflow-hidden bg-muted">
                     <img
@@ -117,23 +252,52 @@ export function AiMenuContainer() {
                       alt={item.name}
                       className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
-                    <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/75 to-transparent px-2.5 pb-2 pt-8">
-                      <p className="text-[10px] text-white/75">#{index + 1}</p>
-                      <p className="line-clamp-2 text-xs font-semibold leading-snug text-white">{item.name}</p>
+
+                    <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent px-2.5 pb-2 pt-8">
+                      <p className="text-[10px] text-white/75">
+                        #{item.rank}
+                      </p>
+
+                      <p className="line-clamp-2 text-xs font-semibold leading-snug text-white">
+                        {item.name}
+                      </p>
+
                       {item.rationale[0] ? (
-                        <p className="mt-0.5 line-clamp-2 text-[10px] text-white/70">{item.rationale[0]}</p>
+                        <p className="mt-0.5 line-clamp-2 text-[10px] text-white/70">
+                          {item.rationale[0]}
+                        </p>
                       ) : null}
                     </div>
+
                     <div className="absolute top-2 right-2">
-                      {item.score > 65 ? (
-                        <Badge className="h-5 px-1.5 text-[10px]">{item.score}</Badge>
-                      ) : (
-                        <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">
-                          {item.score}
-                        </Badge>
-                      )}
+                      <Badge
+                        variant={
+                          item.durabilityRank >= 3
+                            ? "default"
+                            : item.durabilityRank === 2
+                              ? "secondary"
+                              : "destructive"
+                        }
+                        className="h-5 px-1.5 text-[10px]"
+                      >
+                        {durabilityLabel(
+                          item.durabilityRank,
+                        )}
+                      </Badge>
                     </div>
                   </div>
+
+                  <CardContent className="px-3 py-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-medium">
+                        Resep tersedia
+                      </p>
+
+                      <span className="text-[10px] text-muted-foreground">
+                        {item.recipe.bahan.length} bahan
+                      </span>
+                    </div>
+                  </CardContent>
                 </Card>
               </Link>
             ))}

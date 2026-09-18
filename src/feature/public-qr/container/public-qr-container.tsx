@@ -12,15 +12,15 @@ import type { PublicQrPayload } from "@/feature/public-qr/types";
 const SAFETY_COPY: Record<string, { title: string; body: string }> = {
   SAFE: {
     title: "Masih dalam batas aman",
-    body: "Makanan boleh dikonsumsi. Perhatikan sisa waktu di bawah.",
+    body: "Makanan boleh dikonsumsi. Tetap perhatikan kehigenisan makanan dan suhu ruangan. Perhatikan sisa waktu di bawah.",
   },
   WARNING: {
     title: "Mendekati batas aman",
-    body: "Segera bagikan atau konsumsi. Waktu tersisa sudah tipis.",
+    body: "Segera bagikan atau konsumsi. Waktu tersisa sudah tipis. Perhatikan visual dan aroma makanan, jika terlihat tidak normal/tidak layak jangan dikonsumsi.",
   },
   PAST_LIMIT: {
     title: "Lewat batas aman konsumsi",
-    body: "Jangan dibagikan. Laporkan ke petugas SPPG untuk tindak lanjut.",
+    body: "Jangan dibagikan. Laporkan ke sekolah atau petugas SPPG untuk tindak lanjut.",
   },
   PENDING: {
     title: "Batas aman belum dihitung",
@@ -78,7 +78,7 @@ export function PublicQrContainer({
           : "from-[#dce7f4] via-[#f4f7fb] to-[#eef3f8]";
 
   return (
-    <div className={cn("min-h-screen overflow-x-clip bg-gradient-to-b", tone)}>
+    <div className={cn("min-h-screen overflow-x-clip bg-linear-to-b", tone)}>
       <header className="flex items-center justify-between px-4 py-4 sm:px-6">
         <div className="flex items-center gap-2">
           <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -166,7 +166,7 @@ export function PublicQrContainer({
               <p className="border-b border-foreground/8 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Waktu kegiatan
               </p>
-              <InfoRow label="Dibuat" value={formatActivityTime(data.createdAt, "Belum tercatat")} />
+              <InfoRow label="Selesai Dibuat" value={formatActivityTime(data.createdAt, "Belum tercatat")} />
               <InfoRow label="Dikirim" value={formatActivityTime(data.departedAt, "Belum dikirim")} />
               <InfoRow label="Diterima" value={formatActivityTime(data.receivedAt, "Belum diterima")} />
             </section>

@@ -64,10 +64,12 @@ export function DashboardContainer() {
   const canDistribution = role === "SUPERVISOR" || role === "DISTRIBUTOR";
   const besar = data?.productionBatches.find((b) => b.portionType === "BESAR");
   const kecil = data?.productionBatches.find((b) => b.portionType === "KECIL");
+  const date = new Date();
+  const today = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
   return (
     <div>
-      <PageHeader title="Dashboard Operasional Hari Ini" />
+      <PageHeader title="Dashboard Operasional Hari Ini" action={today.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} />
       <QueryState isLoading={query.isLoading} error={query.error} onRetry={() => query.refetch()}>
         {data ? (
           <div className="space-y-6">
@@ -75,9 +77,9 @@ export function DashboardContainer() {
               {[besar, kecil].map((batch, index) => {
                 if (!batch) {
                   return (
-                    <Card key={`empty-${index}`} size="sm">
+                    <Card key={`empty-${index}`} size="default">
                       <CardHeader className="pb-0">
-                        <CardTitle className="text-sm text-muted-foreground">
+                        <CardTitle className="text-sm font-semibold text-muted-foreground">
                           {index === 0 ? "Porsi Besar" : "Porsi Kecil"}
                         </CardTitle>
                       </CardHeader>
@@ -96,31 +98,29 @@ export function DashboardContainer() {
                     aria-label={canProduction ? `Produksi ${batch.code}` : `Batch ${batch.code}`}
                     className="block"
                   >
-                    <Card size="sm" className="transition-colors hover:bg-muted/40">
+                    <Card size="default" className="transition-colors hover:bg-muted/40">
                       <CardHeader className="pb-0">
-                        <CardTitle className="text-sm text-muted-foreground">
+                        <CardTitle className="text-sm font-semibold text-muted-foreground">
                           {index === 0 ? "Porsi Besar" : "Porsi Kecil"}
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-start gap-3">
                           <div className="min-w-0 flex-1 space-y-1.5">
                             <div className="flex flex-wrap items-center gap-2">
-                              <p className="font-semibold">{batch.code}</p>
                               <ProductionBadge status={batch.productionStatus} />
                               <SafetyBadge status={batch.safetyStatus} />
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                              {batch.menu.name} · {batch.actualQty}/{batch.targetQty}
+                            <p className="font-semibold">{batch.menu.name}</p>
+                            <p className="text-sm font-semibold text-muted-foreground">
+                              Kode Batch: {batch.code}
                             </p>
+                            <p className="text-sm text-muted-foreground">
+                              Total Porsi: {batch.actualQty}/{batch.targetQty}
+                            </p>
+                            
                           </div>
                           <Countdown size="sm" safeUntil={batch.safeUntil} serverNow={query.data!.serverNow} />
-                          <span
-                            className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground"
-                            aria-hidden
-                          >
-                            <ChevronRight className="size-4" />
-                          </span>
                         </div>
                       </CardContent>
                     </Card>
