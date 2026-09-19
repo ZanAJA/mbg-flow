@@ -190,7 +190,7 @@ export function LoginContainer() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(160deg,#f4f7fb_0%,#eef3f8_45%,#f8fafc_100%)]">
+    <div className="relative min-h-screen overflow-auto bg-[linear-gradient(160deg,#f4f7fb_0%,#eef3f8_45%,#f8fafc_100%)]">
       <section
         className={cn(
           "auth-fade relative z-10 min-h-[40vh] overflow-hidden sm:absolute sm:inset-y-0 sm:left-0 sm:w-1/2 sm:min-h-screen",

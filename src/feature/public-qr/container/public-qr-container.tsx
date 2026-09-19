@@ -68,7 +68,7 @@ function TimelineStep({
       {!isLast ? (
         <span
           className={cn(
-            "absolute top-8 bottom-0 left-[15px] w-px",
+            "absolute top-8 bottom-0 left-3.75 w-px",
             done ? "bg-emerald-500/50" : "bg-foreground/10",
           )}
           aria-hidden
@@ -135,11 +135,11 @@ export function PublicQrContainer({
   const safety = data?.safetyStatus ?? "PENDING";
   const tone =
     safety === "SAFE"
-      ? "from-emerald-100/80 via-[#f4f7fb] to-[#eef3f8]"
+      ? "from-emerald-100/30 via-[#f4f7fb] to-[#eef3f8]"
       : safety === "WARNING"
-        ? "from-amber-100/90 via-[#f8f5ef] to-[#f4f7fb]"
+        ? "from-amber-100/30 via-[#f8f5ef] to-[#f4f7fb]"
         : safety === "PAST_LIMIT"
-          ? "from-red-100/90 via-[#faf4f4] to-[#f4f7fb]"
+          ? "from-red-100/30 via-[#faf4f4] to-[#f4f7fb]"
           : "from-[#dce7f4] via-[#f4f7fb] to-[#eef3f8]";
 
   const madeAt = formatActivityTime(data?.createdAt);
@@ -182,7 +182,7 @@ export function PublicQrContainer({
 
         {data ? (
           <div className="space-y-4">
-            <section className="overflow-hidden rounded-2xl bg-[#0b1f3a] px-5 py-6 text-white shadow-sm">
+            {/* <section className="overflow-hidden rounded-2xl bg-[#0b1f3a] px-5 py-6 text-white shadow-sm">
               <p className="text-[11px] font-medium tracking-[0.18em] uppercase text-white/65">
                 Hasil scan QR
               </p>
@@ -198,7 +198,7 @@ export function PublicQrContainer({
                   {data.deliveryCode}
                 </span>
               </div>
-            </section>
+            </section> */}
 
             <section className="rounded-2xl bg-background/90 px-4 py-5 shadow-sm ring-1 ring-foreground/8 backdrop-blur">
               <div className="mb-4 text-center">
@@ -226,14 +226,14 @@ export function PublicQrContainer({
               ) : null}
             </section>
 
-            {data.durabilityNote ? (
+            {/* {data.durabilityNote ? (
               <section className="rounded-2xl bg-background/90 px-4 py-4 shadow-sm ring-1 ring-foreground/8 backdrop-blur">
                 <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                   Catatan daya tahan
                 </p>
                 <p className="mt-2 text-sm text-foreground text-pretty">{data.durabilityNote}</p>
               </section>
-            ) : null}
+            ) : null} */}
 
             <section className="rounded-2xl bg-background/90 px-4 py-4 shadow-sm ring-1 ring-foreground/8 backdrop-blur">
               <p className="mb-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
@@ -266,6 +266,7 @@ export function PublicQrContainer({
             <section className="rounded-2xl bg-background/90 px-4 py-2 shadow-sm ring-1 ring-foreground/8 backdrop-blur">
               <InfoRow label="Sekolah" value={data.schoolName} />
               <InfoRow label="Alamat" value={data.schoolAddress} />
+              <InfoRow label="Total Porsi" value={data.portionQty} />
               <InfoRow label="SPPG" value={data.sppgName} />
               <InfoRow label="Produksi" value={data.productionCode} />
             </section>

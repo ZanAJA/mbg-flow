@@ -5,7 +5,7 @@ export type PublicQrPayload = {
   sppgAddress: string;
   schoolName: string;
   schoolAddress: string;
-  portionQty: number;
+  portionQty: string;
   portionType: string;
   productionCode: string;
   deliveryCode: string;
