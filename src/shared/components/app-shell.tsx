@@ -153,9 +153,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background">
       <aside className="fixed inset-y-0 left-0 hidden w-64 border-r bg-sidebar p-4 md:flex md:flex-col">
         <div className="mb-6 flex items-center gap-2 px-2">
-          <div className="flex size-9 items-center justify-center rounded-lg border text-primary-foreground">
-            <Image src="/logo-mbgflow.png" alt="Logo MBG Flow" width={24} height={24} />
-          </div>
+          <Image
+            src="/logo-mbgflow.png"
+            alt="Logo MBG Flow"
+            width={36}
+            height={36}
+            className="size-9 object-contain"
+          />
           <div>
             <p className="text-sm font-semibold">MBG Flow</p>
             <p className="text-xs text-muted-foreground">SPPG Cilandak</p>

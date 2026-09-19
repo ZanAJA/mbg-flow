@@ -1,21 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Sparkles } from "lucide-react";
+import { PencilLine, Sparkles } from "lucide-react";
 import { apiFetch } from "@/shared/lib/api";
 import { menuCoverUrl } from "@/shared/lib/menu-cover";
+import { ManualMenuForm } from "@/feature/ai-menu/components/manual-menu-form";
 import { PageHeader, EmptyState } from "@/shared/components/page-header";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 
 const STORAGE_KEY = "mbg-ai-menu-recommendations";
 const schema = z.object({
@@ -112,7 +114,7 @@ export function AiMenuContainer() {
         );
 
       if (hasValidMenuIds) {
-        setResult(parsed);
+        startTransition(() => setResult(parsed));
       } else {
         sessionStorage.removeItem(STORAGE_KEY);
       }
@@ -172,58 +174,52 @@ export function AiMenuContainer() {
     <div>
       <PageHeader title="Rekomendasi menu" />
       <p className="mb-4 -mt-4 text-sm text-muted-foreground">
-        AI membuat beberapa menu beserta resep, lalu sistem
-        mengurutkannya berdasarkan ketahanan makanan.
+        Pilih rekomendasi AI atau masukkan resep menu sendiri untuk digunakan dalam produksi.
       </p>
-      <Card className="mb-6">
-        <CardContent>
-          <form
-            className="grid gap-4 md:grid-cols-[1fr_160px_auto]"
-            onSubmit={form.handleSubmit((values) =>
-              generate.mutate(values),
-            )}
-          >
-            <div className="space-y-1">
-              <Label>Bahan utama</Label>
+      <Tabs defaultValue="ai" className="gap-5">
+        <TabsList className="h-9">
+          <TabsTrigger value="ai" className="px-3">
+            <Sparkles /> Rekomendasi AI
+          </TabsTrigger>
+          <TabsTrigger value="manual" className="px-3">
+            <PencilLine /> Input manual
+          </TabsTrigger>
+        </TabsList>
 
-              <Input
-                placeholder="ayam, beras, wortel"
-                {...form.register("ingredientsText")}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label>Target porsi</Label>
-
-              <Input
-                type="number"
-                {...form.register("targetPortions")}
-              />
-            </div>
-
-            <div className="flex items-end">
-              <Button
-                type="submit"
-                disabled={generate.isPending}
+        <TabsContent value="ai" className="space-y-6">
+          <Card>
+            <CardContent>
+              <form
+                className="grid gap-4 md:grid-cols-[1fr_160px_auto]"
+                onSubmit={form.handleSubmit((values) => generate.mutate(values))}
               >
-                <Sparkles className="size-3.5" />
+                <div className="space-y-1">
+                  <Label>Bahan utama</Label>
+                  <Input placeholder="ayam, beras, wortel" {...form.register("ingredientsText")} />
+                </div>
 
-                {generate.isPending
-                  ? "Generate menu..."
-                  : "Generate menu AI"}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+                <div className="space-y-1">
+                  <Label>Target porsi</Label>
+                  <Input type="number" {...form.register("targetPortions")} />
+                </div>
 
-      {!result ? (
-        <EmptyState
-          title="Belum ada menu"
-          description="Isi bahan utama dan target porsi, lalu generate menu dengan AI."
-        />
-      ) : (
-        <div className="space-y-4">
+                <div className="flex items-end">
+                  <Button type="submit" disabled={generate.isPending}>
+                    <Sparkles className="size-3.5" />
+                    {generate.isPending ? "Generate menu..." : "Generate menu AI"}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          {!result ? (
+            <EmptyState
+              title="Belum ada menu"
+              description="Isi bahan utama dan target porsi, lalu generate menu dengan AI."
+            />
+          ) : (
+            <div className="space-y-4">
           <div className="flex flex-wrap items-start gap-2">
             <Badge
               variant="secondary"
@@ -302,8 +298,14 @@ export function AiMenuContainer() {
               </Link>
             ))}
           </div>
-        </div>
-      )}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="manual">
+          <ManualMenuForm />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

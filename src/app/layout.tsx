@@ -13,6 +13,10 @@ export const metadata: Metadata = {
   title: "MBG Flow",
   description:
     "Sistem SPPG: lot bahan baku, rekomendasi menu, produksi paralel, delivery batch sekolah, dan countdown batas aman konsumsi.",
+  icons: {
+    icon: [{ url: "/logo-mbgflow.png", type: "image/png" }],
+    apple: "/logo-mbgflow.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
