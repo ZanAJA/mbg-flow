@@ -33,6 +33,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/shared/components/ui/sheet";
 import { cn } from "@/shared/lib/utils";
 import { ROLE_LABEL } from "@/shared/auth/rbac";
+import { SiteFooter } from "@/shared/components/site-footer";
 
 const NAV: Array<{
   href: string;
@@ -111,7 +112,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [isPublic, me.isError, me.error, pathname, queryClient]);
 
-  if (isPublic) return <>{children}</>;
+  if (pathname.startsWith("/q/")) return <>{children}</>;
+
+  if (isPublic) {
+    return (
+      <div className="flex min-h-screen flex-col bg-background">
+        <main className="min-w-0 flex-1">{children}</main>
+        <SiteFooter />
+      </div>
+    );
+  }
 
   const user = me.data?.data;
 
@@ -163,7 +173,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className="min-w-0 md:pl-64">
+      <div className="flex min-h-screen min-w-0 flex-col md:pl-64">
         <header className="sticky top-0 z-20 flex items-center justify-between border-b bg-background/95 px-4 py-3 backdrop-blur md:hidden">
           <div>
             <p className="text-sm font-semibold">MBG Dapur</p>
@@ -193,7 +203,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </SheetContent>
           </Sheet>
         </header>
-        <main className="min-w-0 px-4 py-6 md:px-8">{children}</main>
+        <main className="min-w-0 flex-1 px-4 py-6 md:px-8">{children}</main>
+        <SiteFooter />
       </div>
 
       <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
