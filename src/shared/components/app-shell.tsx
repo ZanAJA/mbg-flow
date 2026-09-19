@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -12,7 +13,6 @@ import {
   LogOut,
   MapPinned,
   Menu,
-  QrCode,
   ScrollText,
   Truck,
   Users,
@@ -153,11 +153,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background">
       <aside className="fixed inset-y-0 left-0 hidden w-64 border-r bg-sidebar p-4 md:flex md:flex-col">
         <div className="mb-6 flex items-center gap-2 px-2">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <QrCode className="size-4" />
+          <div className="flex size-9 items-center justify-center rounded-lg border text-primary-foreground">
+            <Image src="/logo-mbgflow.png" alt="Logo MBG Flow" width={24} height={24} />
           </div>
           <div>
-            <p className="text-sm font-semibold">MBG Dapur</p>
+            <p className="text-sm font-semibold">MBG Flow</p>
             <p className="text-xs text-muted-foreground">SPPG Cilandak</p>
           </div>
         </div>
@@ -176,7 +176,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen min-w-0 flex-col md:pl-64">
         <header className="sticky top-0 z-20 flex items-center justify-between border-b bg-background/95 px-4 py-3 backdrop-blur md:hidden">
           <div>
-            <p className="text-sm font-semibold">MBG Dapur</p>
+            <p className="text-sm font-semibold">MBG Flow</p>
             <p className="text-xs text-muted-foreground">{user ? ROLE_LABEL[user.role] : "Memuat"}</p>
           </div>
           <Sheet>
@@ -212,7 +212,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <DialogHeader>
             <DialogTitle>Keluar dari akun?</DialogTitle>
             <DialogDescription>
-              Sesi Anda akan diakhiri. Masuk kembali untuk melanjutkan kerja di MBG Dapur.
+              Sesi Anda akan diakhiri. Masuk kembali untuk melanjutkan kerja di MBG Flow.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

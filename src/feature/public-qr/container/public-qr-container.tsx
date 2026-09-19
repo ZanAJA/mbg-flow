@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { MapPin, QrCode, ShieldAlert } from "lucide-react";
+import { MapPin, ShieldAlert } from "lucide-react";
+import Image from "next/image";
 import { apiFetch } from "@/shared/lib/api";
 import { Countdown } from "@/shared/components/countdown";
 import { SafetyBadge } from "@/shared/components/status-badges";
@@ -81,11 +82,11 @@ export function PublicQrContainer({
     <div className={cn("min-h-screen overflow-x-clip bg-linear-to-b", tone)}>
       <header className="flex items-center justify-between px-4 py-4 sm:px-6">
         <div className="flex items-center gap-2">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <QrCode className="size-4" />
+          <div className="flex size-9 items-center justify-center rounded-lg border text-primary-foreground">
+            <Image src="/logo-mbgflow.png" alt="Logo MBG Flow" width={24} height={24} />
           </div>
           <div>
-            <p className="text-sm font-semibold tracking-tight">MBG SPPG</p>
+            <p className="text-sm font-semibold tracking-tight">MBG Flow</p>
             <p className="text-[11px] text-muted-foreground">Cek status makanan</p>
           </div>
         </div>

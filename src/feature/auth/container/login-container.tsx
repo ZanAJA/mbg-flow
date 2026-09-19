@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -204,7 +205,12 @@ export function LoginContainer() {
         />
         <div className="absolute inset-0 bg-linear-to-t from-[#0b1f3a]/92 via-[#0b1f3a]/55 to-[#0b1f3a]/25" />
         <div className="relative z-10 flex h-full min-h-[40vh] flex-col justify-between p-6 text-white sm:min-h-screen sm:p-10">
-          <p className="text-sm font-semibold tracking-[0.28em] uppercase">MBG SPPG</p>
+          <div className="flex items-center gap-2">
+            <div className="flex size-9 items-center justify-center rounded-lg border text-primary-foreground">
+              <Image src="/logo-mbgflow.png" alt="Logo MBG Flow" width={24} height={24} />
+            </div>
+            <p className="text-sm font-semibold tracking-[0.18em] uppercase">MBG Flow</p>
+          </div>
           <div className="max-w-md space-y-3">
             <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
               {isRegister ? "Gabung tim dapur & distribusi" : "Dapur & distribusi yang terpantau"}

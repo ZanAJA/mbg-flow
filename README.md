@@ -1,4 +1,4 @@
-# MBG Dapur & Distribusi
+# MBG Flow: Dapur & Distribusi
 
 Sistem operasional SPPG untuk alur **lot bahan baku → rekomendasi menu → production batch paralel → delivery batch per sekolah → QR publik + countdown batas aman konsumsi**.
 

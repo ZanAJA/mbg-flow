@@ -10,7 +10,7 @@ const jakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "MBG Dapur & Distribusi",
+  title: "MBG Flow",
   description:
     "Sistem SPPG: lot bahan baku, rekomendasi menu, produksi paralel, delivery batch sekolah, dan countdown batas aman konsumsi.",
 };
