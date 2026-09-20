@@ -86,6 +86,7 @@ const demos = [
   { role: "Distributor", email: "distributor@sppg.local", password: "distributor" },
 ];
 
+// Source: Unsplash image CDN, https://images.unsplash.com/photo-1556910103-1c02745aae4d
 const LANDING_IMAGE =
   "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=1600&q=80";
 
