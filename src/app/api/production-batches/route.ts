@@ -51,8 +51,10 @@ export async function POST(request: Request) {
       throw new HttpError(403, "Hanya supervisor yang dapat menentukan tim.");
     }
 
-    const selectedTeamIds = [body.kitchenTeamId, body.driverTeamId].filter(
-      (id): id is string => Boolean(id),
+    const selectedTeamIds = Array.from(
+      new Set(
+        [body.kitchenTeamId, body.driverTeamId].filter((id): id is string => Boolean(id)),
+      ),
     );
     const teams = selectedTeamIds.length
       ? await prisma.team.findMany({

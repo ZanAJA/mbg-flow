@@ -14,7 +14,7 @@ import { Button } from "@/shared/components/ui/button";
 import { DatePicker } from "@/shared/components/ui/date-picker";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Card, CardContent } from "@/shared/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import {
   Select,
@@ -43,7 +43,6 @@ type Ingredient = {
   name: string;
   category: string;
   unit: string;
-  lots?: unknown[];
 };
 
 const lotSchema = z.object({
@@ -56,12 +55,6 @@ const lotSchema = z.object({
   supplier: z.string().min(2),
 });
 
-const ingredientSchema = z.object({
-  name: z.string().trim().min(2),
-  category: z.string().trim().min(2),
-  unit: z.string().trim().min(1),
-});
-
 type FefoFilter = "all" | "urgent" | "soon" | "ok";
 
 const filterFieldClass = "min-w-0 space-y-1";
@@ -70,8 +63,6 @@ const selectTriggerClass = "w-full min-w-0 overflow-hidden [&>span]:min-w-0 [&>s
 export function IngredientsContainer() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [manageOpen, setManageOpen] = useState(false);
-  const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [storage, setStorage] = useState("");
@@ -100,11 +91,6 @@ export function IngredientsContainer() {
     },
   });
 
-  const ingredientForm = useForm({
-    resolver: zodResolver(ingredientSchema),
-    defaultValues: { name: "", category: "Umum", unit: "kg" },
-  });
-
   const createLot = useMutation({
     mutationFn: (values: z.infer<typeof lotSchema>) =>
       apiFetch("/api/ingredients/lots", { method: "POST", body: JSON.stringify(values) }),
@@ -122,36 +108,6 @@ export function IngredientsContainer() {
         storageType: "Chiller 0-4°C",
         supplier: "",
       });
-    },
-    onError: (error) => toast.error(error.message),
-  });
-
-  const saveIngredient = useMutation({
-    mutationFn: async (values: z.infer<typeof ingredientSchema>) => {
-      if (editingIngredient) {
-        return apiFetch(`/api/ingredients/${editingIngredient.id}`, {
-          method: "PATCH",
-          body: JSON.stringify(values),
-        });
-      }
-      return apiFetch("/api/ingredients", { method: "POST", body: JSON.stringify(values) });
-    },
-    onSuccess: () => {
-      toast.success(editingIngredient ? "Bahan diperbarui" : "Bahan ditambahkan");
-      queryClient.invalidateQueries({ queryKey: ["ingredients"] });
-      queryClient.invalidateQueries({ queryKey: ["lots"] });
-      setManageOpen(false);
-      setEditingIngredient(null);
-      ingredientForm.reset({ name: "", category: "Umum", unit: "kg" });
-    },
-    onError: (error) => toast.error(error.message),
-  });
-
-  const deleteIngredient = useMutation({
-    mutationFn: (id: string) => apiFetch(`/api/ingredients/${id}`, { method: "DELETE" }),
-    onSuccess: () => {
-      toast.success("Bahan dihapus");
-      queryClient.invalidateQueries({ queryKey: ["ingredients"] });
     },
     onError: (error) => toast.error(error.message),
   });
@@ -193,34 +149,11 @@ export function IngredientsContainer() {
     setFefo("all");
   }
 
-  function openCreateIngredient() {
-    setEditingIngredient(null);
-    ingredientForm.reset({ name: "", category: "Umum", unit: "kg" });
-    setManageOpen(true);
-  }
-
-  function openEditIngredient(item: Ingredient) {
-    setEditingIngredient(item);
-    ingredientForm.reset({
-      name: item.name,
-      category: item.category,
-      unit: item.unit,
-    });
-    setManageOpen(true);
-  }
-
   return (
     <div className="min-w-0">
       <PageHeader
         title="Bahan baku & lot"
-        action={
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={openCreateIngredient}>
-              Kelola bahan
-            </Button>
-            <Button onClick={() => setOpen(true)}>Catat lot baru</Button>
-          </div>
-        }
+        action={<Button onClick={() => setOpen(true)}>Catat lot baru</Button>}
       />
 
       {rows.length > 0 ? (
@@ -382,12 +315,10 @@ export function IngredientsContainer() {
 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <Card className="w-full max-w-lg bg-background">
-            <CardHeader>
-              <CardTitle>Penerimaan lot</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <Card className="relative z-50 w-full max-w-lg bg-background">
+            <CardContent className="pt-6">
               <form className="space-y-3" onSubmit={form.handleSubmit((values) => createLot.mutate(values))}>
+                <h2 className="text-lg font-semibold tracking-tight">Penerimaan lot</h2>
                 <div className="space-y-1">
                   <Label>Nama bahan</Label>
                   <Input placeholder="Contoh: Dada ayam" list="ingredient-names" {...form.register("name")} />
@@ -456,100 +387,6 @@ export function IngredientsContainer() {
           </Card>
         </div>
       ) : null}
-
-      {manageOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <Card className="w-full max-w-md bg-background">
-            <CardHeader>
-              <CardTitle>{editingIngredient ? "Edit bahan" : "Tambah bahan"}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form
-                className="space-y-3"
-                onSubmit={ingredientForm.handleSubmit((values) => saveIngredient.mutate(values))}
-              >
-                <div className="space-y-1">
-                  <Label>Nama</Label>
-                  <Input {...ingredientForm.register("name")} />
-                </div>
-                <div className="space-y-1">
-                  <Label>Kategori</Label>
-                  <Input {...ingredientForm.register("category")} />
-                </div>
-                <div className="space-y-1">
-                  <Label>Satuan</Label>
-                  <Input {...ingredientForm.register("unit")} />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setManageOpen(false);
-                      setEditingIngredient(null);
-                    }}
-                  >
-                    Batal
-                  </Button>
-                  <Button type="submit" disabled={saveIngredient.isPending}>
-                    Simpan
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      ) : null}
-
-      <Card className="mt-4">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Daftar bahan</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {ingredientRows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Belum ada master bahan. Tambah lewat lot atau tombol Kelola bahan.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nama</TableHead>
-                  <TableHead>Kategori</TableHead>
-                  <TableHead>Satuan</TableHead>
-                  <TableHead className="w-40">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {ingredientRows.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell>{item.category}</TableCell>
-                    <TableCell>{item.unit}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button type="button" size="sm" variant="ghost" onClick={() => openEditIngredient(item)}>
-                          Edit
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className="text-destructive"
-                          onClick={() => {
-                            if (confirm(`Hapus bahan ${item.name}?`)) deleteIngredient.mutate(item.id);
-                          }}
-                        >
-                          Hapus
-                        </Button>
-                        <ActionLink href={`/ingredients/${item.id}`} label={`Lot ${item.name}`} />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

@@ -82,7 +82,8 @@ export function DatePicker({
       </ArkDatePicker.Control>
 
       <Portal>
-        <ArkDatePicker.Positioner className="z-50">
+        {/* Above modal overlays (z-50) so calendar is not trapped behind "Catat lot" popup */}
+        <ArkDatePicker.Positioner className="z-[110]">
           <ArkDatePicker.Content className="w-[min(100vw-2rem,20rem)] rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-lg outline-none">
             <div className="mb-3 flex gap-2">
               <ArkDatePicker.YearSelect className="h-8 flex-1 rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
