@@ -169,7 +169,7 @@ async function generateMenusWithAi(
   input: MenuRecommendationInput,
 ) {
   const { output } = await generateText({
-    model: google(process.env.AI_MENU_MODEL || "gemini-3.7-flash-lite",),
+    model: google(process.env.AI_MENU_MODEL || "gemini-3.5-flash-lite"),
     output: Output.object({
       schema: aiGeneratedMenuSchema,
     }),
