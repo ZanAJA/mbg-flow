@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -91,6 +92,110 @@ async function main() {
 
   if (!existingMenu) {
     await prisma.menu.create({ data: starterMenu });
+  }
+
+  let demoSppg = await prisma.sppg.findFirst({
+    where: { name: "SPPG Cilandak (Demo)" },
+  });
+
+  if (!demoSppg) {
+    demoSppg = await prisma.sppg.create({
+      data: {
+        name: "SPPG Cilandak (Demo)",
+        address: "Jl. TB Simatupang No. 12, Cilandak, Jakarta Selatan",
+        lat: -6.2895,
+        lng: 106.8003,
+      },
+    });
+  }
+
+  const demoLocation = await prisma.productionLocation.findFirst({
+    where: { sppgId: demoSppg.id, name: "Dapur Utama Cilandak" },
+    select: { id: true },
+  });
+
+  if (!demoLocation) {
+    await prisma.productionLocation.create({
+      data: {
+        sppgId: demoSppg.id,
+        name: "Dapur Utama Cilandak",
+        address: demoSppg.address,
+        lat: demoSppg.lat,
+        lng: demoSppg.lng,
+      },
+    });
+  }
+
+  const demoUsers = [
+    {
+      name: "Rina Supervisor",
+      email: "supervisor@sppg.local",
+      password: "supervisor",
+      role: "SUPERVISOR",
+    },
+    {
+      name: "Budi Dapur",
+      email: "dapur@sppg.local",
+      password: "dapur",
+      role: "KITCHEN",
+    },
+    {
+      name: "Andi Distributor",
+      email: "distributor@sppg.local",
+      password: "distributor",
+      role: "DISTRIBUTOR",
+    },
+  ] as const;
+
+  for (const user of demoUsers) {
+    const passwordHash = await bcrypt.hash(user.password, 10);
+    await prisma.user.upsert({
+      where: { email: user.email },
+      update: {
+        name: user.name,
+        passwordHash,
+        role: user.role,
+        sppgId: demoSppg.id,
+        active: true,
+      },
+      create: {
+        name: user.name,
+        email: user.email,
+        passwordHash,
+        role: user.role,
+        sppgId: demoSppg.id,
+      },
+    });
+  }
+
+  const supervisor = await prisma.user.findUniqueOrThrow({
+    where: { email: "supervisor@sppg.local" },
+  });
+  const team = await prisma.team.upsert({
+    where: { inviteCode: "CILAND" },
+    update: {
+      name: "Tim Operasional Cilandak (Demo)",
+      sppgId: demoSppg.id,
+      createdById: supervisor.id,
+    },
+    create: {
+      name: "Tim Operasional Cilandak (Demo)",
+      inviteCode: "CILAND",
+      sppgId: demoSppg.id,
+      createdById: supervisor.id,
+    },
+  });
+  const users = await prisma.user.findMany({
+    where: { email: { in: demoUsers.map((user) => user.email) } },
+    select: { id: true },
+  });
+
+  for (const user of users) {
+    await prisma.teamMember.upsert({
+      where: { teamId_userId: { teamId: team.id, userId: user.id } },
+      update: {},
+      create: { teamId: team.id, userId: user.id },
+    });
   }
 }
 

@@ -79,7 +79,6 @@ type RegisterValues = z.infer<typeof registerSchema>;
 type AuthMode = "login" | "register";
 
 const FADE_MS = 280;
-const SHOW_DEMO_ACCOUNTS = process.env.NODE_ENV !== "production";
 
 const demos = [
   { role: "Supervisor", email: "supervisor@sppg.local", password: "supervisor" },
@@ -271,22 +270,20 @@ export function LoginContainer() {
                 </Button>
               </form>
 
-              {SHOW_DEMO_ACCOUNTS ? (
-                <div className="mt-6 space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">Akun demo</p>
-                  {demos.map((demo) => (
-                    <button
-                      key={demo.email}
-                      type="button"
-                      className="flex w-full items-center justify-between rounded-lg border bg-background/80 px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
-                      onClick={() => loginForm.reset({ email: demo.email, password: demo.password })}
-                    >
-                      <span>{demo.role}</span>
-                      <span className="text-xs text-muted-foreground">{demo.email}</span>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
+              <div className="mt-6 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Akun demo</p>
+                {demos.map((demo) => (
+                  <button
+                    key={demo.email}
+                    type="button"
+                    className="flex w-full items-center justify-between rounded-lg border bg-background/80 px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
+                    onClick={() => loginForm.reset({ email: demo.email, password: demo.password })}
+                  >
+                    <span>{demo.role}</span>
+                    <span className="text-xs text-muted-foreground">{demo.email}</span>
+                  </button>
+                ))}
+              </div>
 
               <p className="mt-6 text-center text-sm text-muted-foreground">
                 Belum punya akun?{" "}
