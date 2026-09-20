@@ -1,5 +1,9 @@
 import { prisma } from "@/shared/db/prisma";
 import { HttpError } from "@/shared/lib/http";
+import {
+  findMenuImage,
+  type MenuImageResult,
+} from "@/shared/lib/menu-image-search";
 import { google } from "@ai-sdk/google";
 import { generateText, Output } from "ai";
 import { z } from "zod";
@@ -36,6 +40,11 @@ const aiGeneratedMenuSchema = z.object({
         ]),
 
         durabilityNote: z.string().min(1),
+
+        imageKeywords: z
+          .array(z.string().min(2))
+          .min(2)
+          .max(6),
 
         components: z.array(
           z.object({
@@ -178,6 +187,7 @@ async function generateMenusWithAi(
       "Generate 5-10 practical Indonesian school-meal menu candidates from the supplied main ingredients.",
       "Every menu must contain a complete recipe include carbohydrates, proteins, vegetables, fruits, and healthy fats.",
       "Every recipe must contain ingredients with quantities per 100 portions and cooking steps.",
+      "For each completed menu, provide 2-6 concise image search keywords describing the full plated meal, not merely the supplied main ingredients.",
       "Use the supplied main ingredients whenever they are appropriate for the menu.",
       "Recipes must be realistic for large-scale SPPG kitchen production.",
       "Classify the general durability characteristic of the finished food into exactly one of: LEBIH_TAHAN, SEDANG, or LEBIH_CEPAT_RUSAK.",
@@ -200,6 +210,7 @@ async function generateMenusWithAi(
         "Setiap menu harus memiliki resep lengkap termasuk Karbohidrat, Protein & Nabati, Sayuran, Buah-buahan, Sedikit Lemak Sehat.",
         "Setiap resep harus memiliki bahan, jumlah per 100 porsi, dan langkah memasak.",
         "Gunakan bahan utama dari input jika sesuai.",
+        "Buat kata kunci gambar dari nama dan komposisi menu lengkap, bukan hanya bahan utama input.",
         "Menu harus realistis untuk produksi MBG di SPPG.",
         "Klasifikasikan ketahanan makanan secara relatif.",
       ],
@@ -274,8 +285,21 @@ function rankGeneratedMenus(
 async function saveGeneratedMenus(
   menus: MenuCandidate[],
 ) {
+  const images: Array<MenuImageResult | null> = [];
+  const usedImageUrls = new Set<string>();
+
+  for (const menu of menus) {
+    const image = await findMenuImage(
+      menu.name,
+      menu.imageKeywords,
+      usedImageUrls,
+    );
+    images.push(image);
+    if (image) usedImageUrls.add(image.imageUrl);
+  }
+
   return prisma.$transaction(
-    menus.map((menu) =>
+    menus.map((menu, index) =>
       prisma.menu.create({
         data: {
           name: menu.name,
@@ -293,6 +317,7 @@ async function saveGeneratedMenus(
                 }),
               ),
             ),
+          ...(images[index] ?? {}),
         },
       }),
     ),
@@ -354,6 +379,10 @@ export async function recommendMenus(
           durabilityCategory: menu.durabilityCategory,
           durabilityRank: menu.durabilityRank,
           durabilityNote: savedMenu.durabilityNote,
+          imageUrl: savedMenu.imageUrl,
+          imageSourceUrl: savedMenu.imageSourceUrl,
+          imageAttribution: savedMenu.imageAttribution,
+          imageLicense: savedMenu.imageLicense,
           recipe: menu.recipe,
           components: menu.components,
           needs: menu.needs,

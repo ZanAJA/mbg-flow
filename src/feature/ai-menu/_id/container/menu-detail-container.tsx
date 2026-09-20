@@ -22,12 +22,16 @@ import {
 } from "@/shared/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import type { SessionShape } from "@/shared/components/session-types";
-import { MapPin, Plus } from "lucide-react";
+import { ExternalLink, MapPin, Plus } from "lucide-react";
 
 type MenuDetail = {
   id: string;
   name: string;
   durabilityNote: string;
+  imageUrl: string | null;
+  imageSourceUrl: string | null;
+  imageAttribution: string | null;
+  imageLicense: string | null;
   recipe: { langkah: string[]; bahan: Array<{ name: string; qtyPer100: number; unit: string }> };
   components: Array<{ key: string; name: string }>;
 };
@@ -136,17 +140,33 @@ export function MenuDetailContainer() {
             <Card className="overflow-hidden pt-0">
               <div className="aspect-2/1 max-h-56 bg-muted">
                 <img
-                  src={menuCoverUrl(menu.name)}
+                  src={menuCoverUrl(menu.name, menu.imageUrl)}
                   alt={menu.name}
                   className="size-full object-cover"
                 />
               </div>
+              {menu.imageSourceUrl ? (
+                <a
+                  href={menu.imageSourceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 border-b px-4 py-2 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <ExternalLink className="size-3" />
+                  <span className="truncate">
+                    {menu.imageAttribution ?? "Sumber foto"}
+                    {menu.imageLicense ? ` · ${menu.imageLicense}` : ""}
+                  </span>
+                </a>
+              ) : null}
               <CardHeader>
                 <CardTitle>Resep</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <p className="text-sm font-medium">Bahan /100 porsi</p>
+                  <p className="border-l-4 border-primary bg-primary/5 px-3 py-2 text-sm font-bold text-foreground">
+                    Bahan / 100 porsi
+                  </p>
                   <ul className="mt-2 space-y-1 text-sm">
                     {menu.recipe.bahan.map((item) => (
                       <li key={item.name}>

@@ -19,7 +19,7 @@ import { Card, CardContent } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 
-const STORAGE_KEY = "mbg-ai-menu-recommendations";
+const STORAGE_KEY = "mbg-ai-menu-recommendations-v3";
 const schema = z.object({
   ingredientsText: z.string().min(3, "Isi bahan utama"),
   targetPortions: z.coerce.number().int().positive(),
@@ -40,6 +40,10 @@ type Recommendation = {
       | "LEBIH_CEPAT_RUSAK";
     durabilityRank: number;
     durabilityNote: string;
+    imageUrl: string | null;
+    imageSourceUrl: string | null;
+    imageAttribution: string | null;
+    imageLicense: string | null;
     recipe: {
       porsiDasar: number;
       bahan: Array<{
@@ -81,7 +85,7 @@ function durabilityLabel(rank: number) {
     return "Ketahanan sedang";
   }
 
-  return "Lebih cepat rusak";
+  return "Lebih cepat basi";
 }
 
 export function AiMenuContainer() {
@@ -244,7 +248,7 @@ export function AiMenuContainer() {
                 <Card className="overflow-hidden py-0 transition-shadow group-hover:shadow-md">
                   <div className="relative aspect-5/3 overflow-hidden bg-muted">
                     <img
-                      src={menuCoverUrl(item.name)}
+                      src={menuCoverUrl(item.name, item.imageUrl)}
                       alt={item.name}
                       className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
@@ -274,7 +278,11 @@ export function AiMenuContainer() {
                               ? "secondary"
                               : "destructive"
                         }
-                        className="h-5 px-1.5 text-[10px]"
+                        className={
+                          item.durabilityRank === 1
+                            ? "h-6 border-red-300 bg-red-600 px-2 text-[11px] font-semibold text-white shadow-sm"
+                            : "h-5 px-1.5 text-[10px]"
+                        }
                       >
                         {durabilityLabel(
                           item.durabilityRank,

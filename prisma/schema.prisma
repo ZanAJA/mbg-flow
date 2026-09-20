@@ -115,6 +115,11 @@ model Menu {
   recommendedComponents String
   aiSnapshot            String?
   durabilityNote        String
+  imageUrl              String?
+  imageSourceUrl        String?
+  imageAttribution      String?
+  imageLicense          String?
+  imageSearchQuery      String?
   batches               ProductionBatch[]
 }
 
