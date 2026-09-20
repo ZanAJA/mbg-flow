@@ -205,7 +205,7 @@ export function SchoolsContainer() {
                 <p className="text-xs text-destructive">{sppgForm.formState.errors.mapsUrl.message}</p>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  Pin lokasi di Maps → Bagikan → salin link penuh (bukan maps.app.goo.gl).
+                  Pin lokasi di Maps → salin link penuh pada browser (bukan maps.app.goo.gl).
                 </p>
               )}
             </div>
@@ -243,7 +243,7 @@ export function SchoolsContainer() {
                   {rows.map((school) => (
                     <TableRow key={school.id}>
                       <TableCell className="font-medium">{school.name}</TableCell>
-                      <TableCell className="max-w-[18rem] wrap-break-word">{school.address}</TableCell>
+                      <TableCell className="max-w-80">{school.address}</TableCell>
                       <TableCell>
                         {school.lat != null && school.lng != null ? (
                           <a
@@ -312,7 +312,7 @@ export function SchoolsContainer() {
                     <p className="text-xs text-destructive">{form.formState.errors.mapsUrl.message}</p>
                   ) : (
                     <p className="text-xs text-muted-foreground">
-                      Opsional. Pin lokasi → Bagikan → salin link penuh.
+                      Opsional. Pin lokasi → salin link penuh pada browser.
                     </p>
                   )}
                 </div>

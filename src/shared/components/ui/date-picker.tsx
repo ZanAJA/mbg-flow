@@ -27,6 +27,21 @@ function toDateValues(isoDate?: string) {
   }
 }
 
+function formatDisplayDate(value?: string) {
+  if (!value) return "";
+  try {
+    const [year, month, day] = value.split("-").map(Number);
+    if (!year || !month || !day) return "";
+    return new Intl.DateTimeFormat("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(new Date(year, month - 1, day));
+  } catch {
+    return "";
+  }
+}
+
 export function DatePicker({
   id,
   name,
@@ -40,7 +55,9 @@ export function DatePicker({
   controlClassName,
 }: DatePickerProps) {
   const isControlled = value !== undefined;
-
+  const displayValue = formatDisplayDate(
+    isControlled ? value : defaultValue,
+  );
   return (
     <ArkDatePicker.Root
       id={id}
@@ -52,7 +69,17 @@ export function DatePicker({
       value={isControlled ? toDateValues(value) : undefined}
       defaultValue={!isControlled ? toDateValues(defaultValue) : undefined}
       onValueChange={(details) => {
-        onChange?.(details.valueAsString[0] ?? "");
+        const date = details.value[0];
+        if (!date) {
+          onChange?.("");
+          return;
+        }
+        const isoDate = [
+          String(date.year),
+          String(date.month).padStart(2, "0"),
+          String(date.day).padStart(2, "0"),
+        ].join("-");
+        onChange?.(isoDate);
       }}
       className={cn("w-full", className)}
     >
@@ -64,26 +91,41 @@ export function DatePicker({
 
       <ArkDatePicker.Control
         className={cn(
-          "flex h-8 w-full items-center gap-1 rounded-lg border border-input bg-transparent px-2 shadow-none transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:bg-input/30",
-          disabled && "pointer-events-none opacity-50",
+          "flex h-10 w-full items-center rounded-md border border-input bg-background px-3",
+          disabled && "cursor-not-allowed opacity-50",
           controlClassName,
         )}
       >
-        <ArkDatePicker.Input
-          className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
-          placeholder={placeholder}
-        />
-        <ArkDatePicker.Trigger className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
-          <Calendar className="size-3.5" />
+        <ArkDatePicker.Trigger
+          className="min-w-0 flex-1 truncate bg-transparent text-left text-sm outline-none"
+        >
+          <span
+            className={cn(
+              "truncate",
+              displayValue
+                ? "text-foreground"
+                : "text-muted-foreground",
+            )}
+          >
+            {displayValue || placeholder}
+          </span>
         </ArkDatePicker.Trigger>
-        <ArkDatePicker.ClearTrigger className="inline-flex size-6 items-center justify-center rounded-md text-destructive hover:bg-destructive/10">
-          <X className="size-3.5" />
+
+        <ArkDatePicker.Trigger
+          className="ml-2 shrink-0 text-muted-foreground hover:text-foreground"
+        >
+          <Calendar className="size-4" />
+        </ArkDatePicker.Trigger>
+
+        <ArkDatePicker.ClearTrigger
+          className="ml-2 shrink-0 text-muted-foreground hover:text-foreground"
+        >
+          <X className="size-4" />
         </ArkDatePicker.ClearTrigger>
       </ArkDatePicker.Control>
 
       <Portal>
-        {/* Above modal overlays (z-50) so calendar is not trapped behind "Catat lot" popup */}
-        <ArkDatePicker.Positioner className="z-[110]">
+        <ArkDatePicker.Positioner className="z-50">
           <ArkDatePicker.Content className="w-[min(100vw-2rem,20rem)] rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-lg outline-none">
             <div className="mb-3 flex gap-2">
               <ArkDatePicker.YearSelect className="h-8 flex-1 rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
