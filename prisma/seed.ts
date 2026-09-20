@@ -118,6 +118,7 @@ async function main() {
   await prisma.schoolAllocation.deleteMany();
   await prisma.productionComponent.deleteMany();
   await prisma.productionBatch.deleteMany();
+  await prisma.productionLocation.deleteMany();
   await prisma.menu.deleteMany();
   await prisma.ingredientLot.deleteMany();
   await prisma.ingredient.deleteMany();
@@ -177,6 +178,16 @@ async function main() {
       address: "Jl. TB Simatupang No. 12, Cilandak, Jakarta Selatan",
       lat: -6.2895,
       lng: 106.8003,
+    },
+  });
+
+  const productionLocation = await prisma.productionLocation.create({
+    data: {
+      name: "Dapur Utama Cilandak",
+      address: sppg.address,
+      lat: sppg.lat,
+      lng: sppg.lng,
+      sppgId: sppg.id,
     },
   });
 
@@ -477,6 +488,7 @@ async function main() {
       readyAt,
       safeUntil,
       sppgId: sppg.id,
+      productionLocationId: productionLocation.id,
       components: {
         create: katsuComponents.map((component) => {
           const affects = ["nasi", "protein", "sayur"].includes(component.key);

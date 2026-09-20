@@ -128,6 +128,9 @@ export async function createProductionBatch(input: {
   targetQty: number;
   sppgId: string;
   actorUserId: string;
+  productionLocationId: string;
+  kitchenTeamId?: string;
+  driverTeamId?: string;
 }) {
   if (input.targetQty <= 0) throw new HttpError(400, "Target porsi harus lebih dari 0.");
   const menu = await prisma.menu.findUnique({ where: { id: input.menuId } });
@@ -154,6 +157,10 @@ export async function createProductionBatch(input: {
       actualQty: input.targetQty,
       status: "DRAFT",
       sppgId: input.sppgId,
+      productionLocationId: input.productionLocationId,
+      kitchenTeamId: input.kitchenTeamId,
+      driverTeamId: input.driverTeamId,
+      createdById: input.actorUserId,
       components: {
         create: templates.map((template) => {
           const rule = ruleByKey[template.key] ?? ruleByKey.protein;
@@ -168,7 +175,15 @@ export async function createProductionBatch(input: {
         }),
       },
     },
-    include: { components: true, menu: true, sppg: true, allocations: true },
+    include: {
+      components: true,
+      menu: true,
+      sppg: true,
+      productionLocation: true,
+      kitchenTeam: true,
+      driverTeam: true,
+      allocations: true,
+    },
   });
 
   await writeAudit({
@@ -176,7 +191,14 @@ export async function createProductionBatch(input: {
     action: "production_batch_created",
     entityType: "ProductionBatch",
     entityId: batch.id,
-    after: { code: batch.code, menuId: menu.id, targetQty: input.targetQty },
+    after: {
+      code: batch.code,
+      menuId: menu.id,
+      targetQty: input.targetQty,
+      productionLocationId: input.productionLocationId,
+      kitchenTeamId: input.kitchenTeamId,
+      driverTeamId: input.driverTeamId,
+    },
   });
 
   return batch;

@@ -14,6 +14,7 @@ type Batch = {
   productionStatus: string;
   safetyStatus: string;
   menu: { name: string };
+  productionLocation: { name: string } | null;
   allocations: Array<{ deliveryBatch: { status: string } | null }>;
 };
 
@@ -28,6 +29,7 @@ export function BatchesContainer() {
   const query = useQuery({
     queryKey: ["production-batches"],
     queryFn: () => apiFetch<Batch[]>("/api/production-batches"),
+    refetchInterval: 8_000,
   });
 
   const rows = useMemo(() => {
@@ -65,6 +67,9 @@ export function BatchesContainer() {
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold">{batch.code}</p>
                     <p className="text-sm text-muted-foreground">{batch.menu.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {batch.productionLocation?.name ?? "Lokasi belum ditentukan"}
+                    </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <ProductionBadge status={batch.productionStatus} />

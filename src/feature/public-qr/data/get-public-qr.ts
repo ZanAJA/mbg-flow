@@ -31,7 +31,7 @@ export async function getPublicQrByToken(token: string): Promise<PublicQrPayload
     sppgAddress: batch.sppg.address,
     schoolName: school.name,
     schoolAddress: school.address,
-    portionQty: delivery.allocation.portionQty,
+    portionQty: String(delivery.allocation.portionQty),
     portionType: batch.portionType,
     productionCode: batch.code,
     deliveryCode: delivery.code,

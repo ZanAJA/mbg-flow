@@ -1,5 +1,6 @@
 import { prisma } from "@/shared/db/prisma";
 import { serializeBatch } from "@/shared/domain/serializers";
+import { productionBatchScope } from "@/shared/domain/operational-scope";
 import { handleApiError, HttpError, jsonOk, requireUser } from "@/shared/lib/http";
 
 export async function GET(
@@ -7,13 +8,16 @@ export async function GET(
   context: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireUser(["SUPERVISOR", "KITCHEN", "DISTRIBUTOR"]);
+    const user = await requireUser(["SUPERVISOR", "KITCHEN", "DISTRIBUTOR"]);
     const { id } = await context.params;
-    const batch = await prisma.productionBatch.findUnique({
-      where: { id },
+    const batch = await prisma.productionBatch.findFirst({
+      where: { id, AND: [productionBatchScope(user)] },
       include: {
         menu: true,
         sppg: true,
+        productionLocation: true,
+        kitchenTeam: true,
+        driverTeam: true,
         components: { orderBy: { sortOrder: "asc" } },
         allocations: { include: { school: true, deliveryBatch: true } },
       },

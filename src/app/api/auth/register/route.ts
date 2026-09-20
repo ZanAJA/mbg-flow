@@ -16,9 +16,19 @@ const schema = z
     sppgAddress: z.string().trim().optional(),
     sppgLat: z.coerce.number().min(-90).max(90).optional(),
     sppgLng: z.coerce.number().min(-180).max(180).optional(),
+    inviteCode: z.string().trim().optional(),
   })
   .superRefine((values, ctx) => {
-    if (values.role !== "SUPERVISOR") return;
+    if (values.role !== "SUPERVISOR") {
+      if (!values.inviteCode || values.inviteCode.length < 4) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Kode undangan tim wajib diisi",
+          path: ["inviteCode"],
+        });
+      }
+      return;
+    }
     if (!values.sppgName || values.sppgName.length < 2) {
       ctx.addIssue({ code: "custom", message: "Nama SPPG wajib diisi", path: ["sppgName"] });
     }
@@ -42,6 +52,7 @@ export async function POST(request: Request) {
     if (existing) return jsonError(409, "Email sudah terdaftar.");
 
     let sppgId: string;
+    let teamId: string | undefined;
     if (body.role === "SUPERVISOR") {
       const sppg = await prisma.sppg.create({
         data: {
@@ -49,13 +60,24 @@ export async function POST(request: Request) {
           address: body.sppgAddress!,
           lat: body.sppgLat!,
           lng: body.sppgLng!,
+          productionLocations: {
+            create: {
+              name: `Dapur Utama ${body.sppgName!}`,
+              address: body.sppgAddress!,
+              lat: body.sppgLat!,
+              lng: body.sppgLng!,
+            },
+          },
         },
       });
       sppgId = sppg.id;
     } else {
-      const sppg = await prisma.sppg.findFirst({ orderBy: { name: "asc" } });
-      if (!sppg) return jsonError(500, "SPPG belum tersedia. Hubungi administrator.");
-      sppgId = sppg.id;
+      const team = await prisma.team.findUnique({
+        where: { inviteCode: body.inviteCode!.toUpperCase() },
+      });
+      if (!team) return jsonError(404, "Kode undangan tim tidak ditemukan.");
+      sppgId = team.sppgId;
+      teamId = team.id;
     }
 
     const passwordHash = await bcrypt.hash(body.password, 10);
@@ -66,6 +88,7 @@ export async function POST(request: Request) {
         passwordHash,
         role: body.role,
         sppgId,
+        teamMemberships: teamId ? { create: { teamId } } : undefined,
       },
     });
 

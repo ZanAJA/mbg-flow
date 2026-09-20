@@ -38,13 +38,23 @@ const registerSchema = z
     sppgName: z.string().optional(),
     sppgAddress: z.string().optional(),
     mapsUrl: z.string().optional(),
+    inviteCode: z.string().optional(),
   })
   .refine((values) => values.password === values.confirmPassword, {
     message: "Konfirmasi kata sandi tidak cocok",
     path: ["confirmPassword"],
   })
   .superRefine((values, ctx) => {
-    if (values.role !== "SUPERVISOR") return;
+    if (values.role !== "SUPERVISOR") {
+      if (!values.inviteCode || values.inviteCode.trim().length < 4) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Kode undangan tim wajib diisi",
+          path: ["inviteCode"],
+        });
+      }
+      return;
+    }
     if (!values.sppgName || values.sppgName.trim().length < 2) {
       ctx.addIssue({ code: "custom", message: "Nama SPPG wajib", path: ["sppgName"] });
     }
@@ -108,6 +118,7 @@ export function LoginContainer() {
       sppgName: "",
       sppgAddress: "",
       mapsUrl: "",
+      inviteCode: "",
     },
   });
 
@@ -147,7 +158,7 @@ export function LoginContainer() {
               sppgLat: coords.lat,
               sppgLng: coords.lng,
             }
-          : {}),
+          : { inviteCode: values.inviteCode }),
       }),
     });
     const body = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -292,7 +303,7 @@ export function LoginContainer() {
                 <p className="mt-1 text-sm text-muted-foreground">
                   {registerRole === "SUPERVISOR"
                     ? "Supervisor mendaftarkan SPPG sekaligus (nama, alamat, koordinat)."
-                    : "Buat akun dapur/distributor untuk SPPG yang sudah ada."}
+                    : "Masukkan kode undangan tim agar akun terhubung ke SPPG yang benar."}
                 </p>
               </div>
 
@@ -369,7 +380,26 @@ export function LoginContainer() {
                       )}
                     </div>
                   </div>
-                ) : null}
+                ) : (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="invite-code">Kode undangan tim</Label>
+                    <Input
+                      id="invite-code"
+                      autoCapitalize="characters"
+                      placeholder="Contoh: CILAND"
+                      {...registerForm.register("inviteCode")}
+                    />
+                    {registerForm.formState.errors.inviteCode ? (
+                      <p className="text-xs text-destructive">
+                        {registerForm.formState.errors.inviteCode.message}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Minta kode dari supervisor SPPG Anda.
+                      </p>
+                    )}
+                  </div>
+                )}
                 <div className="space-y-1.5">
                   <Label htmlFor="register-password">Kata sandi</Label>
                   <Input id="register-password" type="password" {...registerForm.register("password")} />

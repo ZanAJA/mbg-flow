@@ -1,17 +1,27 @@
 import { prisma } from "@/shared/db/prisma";
 import { serializeDelivery } from "@/shared/domain/serializers";
+import { deliveryBatchScope } from "@/shared/domain/operational-scope";
 import { handleApiError, jsonOk, requireUser } from "@/shared/lib/http";
 
 export async function GET() {
   try {
-    await requireUser(["SUPERVISOR", "DISTRIBUTOR"]);
+    const user = await requireUser(["SUPERVISOR", "DISTRIBUTOR"]);
     const now = new Date();
     const rows = await prisma.deliveryBatch.findMany({
+      where: deliveryBatchScope(user),
       include: {
         allocation: {
           include: {
             school: true,
-            batch: { include: { menu: true, sppg: true } },
+            batch: {
+              include: {
+                menu: true,
+                sppg: true,
+                productionLocation: true,
+                kitchenTeam: true,
+                driverTeam: true,
+              },
+            },
           },
         },
       },

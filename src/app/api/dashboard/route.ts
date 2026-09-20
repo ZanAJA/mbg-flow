@@ -3,6 +3,7 @@ import { deriveSafetyStatus } from "@/shared/safety/engine";
 import { daysUntil, jakartaDayBounds } from "@/shared/lib/format";
 import { handleApiError, jsonOk, requireUser } from "@/shared/lib/http";
 import { serializeBatch, serializeDelivery } from "@/shared/domain/serializers";
+import { deliveryBatchScope, productionBatchScope } from "@/shared/domain/operational-scope";
 
 export async function GET() {
   try {
@@ -12,12 +13,16 @@ export async function GET() {
     const [batches, deliveries, lots] = await Promise.all([
       prisma.productionBatch.findMany({
         where: {
+          AND: [productionBatchScope(user)],
           status: { not: "CLOSED" },
           date: { gte: start, lte: end },
         },
         include: {
           menu: true,
           sppg: true,
+          productionLocation: true,
+          kitchenTeam: true,
+          driverTeam: true,
           components: true,
           allocations: { include: { school: true, deliveryBatch: true } },
         },
@@ -25,13 +30,23 @@ export async function GET() {
       }),
       prisma.deliveryBatch.findMany({
         where: {
-          allocation: {
-            batch: { date: { gte: start, lte: end } },
-          },
+          AND: [deliveryBatchScope(user)],
+          allocation: { batch: { date: { gte: start, lte: end } } },
         },
         include: {
           allocation: {
-            include: { school: true, batch: { include: { menu: true, sppg: true } } },
+            include: {
+              school: true,
+              batch: {
+                include: {
+                  menu: true,
+                  sppg: true,
+                  productionLocation: true,
+                  kitchenTeam: true,
+                  driverTeam: true,
+                },
+              },
+            },
           },
         },
       }),

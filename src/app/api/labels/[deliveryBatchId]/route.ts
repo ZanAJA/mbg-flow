@@ -2,14 +2,16 @@ import QRCode from "qrcode";
 import { prisma } from "@/shared/db/prisma";
 import { deriveSafetyStatus } from "@/shared/safety/engine";
 import { handleApiError, HttpError, jsonOk, requireUser } from "@/shared/lib/http";
+import { assertDeliveryAccess } from "@/shared/domain/operational-scope";
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ deliveryBatchId: string }> },
 ) {
   try {
-    await requireUser(["SUPERVISOR", "KITCHEN", "DISTRIBUTOR"]);
+    const user = await requireUser(["SUPERVISOR", "KITCHEN", "DISTRIBUTOR"]);
     const { deliveryBatchId } = await context.params;
+    await assertDeliveryAccess(user, deliveryBatchId);
     const delivery = await prisma.deliveryBatch.findUnique({
       where: { id: deliveryBatchId },
       include: {

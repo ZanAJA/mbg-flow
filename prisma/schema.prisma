@@ -8,42 +8,61 @@ datasource db {
 }
 
 model User {
-  id              String       @id @default(cuid())
+  id              String            @id @default(cuid())
   name            String
-  email           String       @unique
+  email           String            @unique
   passwordHash    String
   role            String
   sppgId          String
-  active          Boolean      @default(true)
-  createdAt       DateTime     @default(now())
-  sppg            Sppg         @relation(fields: [sppgId], references: [id])
+  active          Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  sppg            Sppg              @relation(fields: [sppgId], references: [id])
   auditLogs       AuditLog[]
-  createdTeams    Team[]       @relation("TeamCreator")
+  createdTeams    Team[]            @relation("TeamCreator")
   teamMemberships TeamMember[]
+  createdBatches  ProductionBatch[] @relation("ProductionBatchCreator")
 }
 
 model Sppg {
-  id      String            @id @default(cuid())
-  name    String
-  address String
-  lat     Float?
-  lng     Float?
-  users   User[]
-  batches ProductionBatch[]
-  teams   Team[]
+  id                  String               @id @default(cuid())
+  name                String
+  address             String
+  lat                 Float?
+  lng                 Float?
+  users               User[]
+  batches             ProductionBatch[]
+  teams               Team[]
+  productionLocations ProductionLocation[]
+}
+
+model ProductionLocation {
+  id        String            @id @default(cuid())
+  sppgId    String
+  name      String
+  address   String
+  lat       Float?
+  lng       Float?
+  active    Boolean           @default(true)
+  createdAt DateTime          @default(now())
+  sppg      Sppg              @relation(fields: [sppgId], references: [id], onDelete: Cascade)
+  batches   ProductionBatch[]
+
+  @@index([sppgId])
 }
 
 model Team {
-  id          String       @id @default(cuid())
-  sppgId      String
-  name        String
-  inviteCode  String       @unique
-  createdById String
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  sppg        Sppg         @relation(fields: [sppgId], references: [id])
-  createdBy   User         @relation("TeamCreator", fields: [createdById], references: [id])
-  members     TeamMember[]
+  id             String            @id @default(cuid())
+  sppgId         String
+  name           String
+  inviteCode     String            @unique
+  createdById    String
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  sppg           Sppg              @relation(fields: [sppgId], references: [id])
+  createdBy      User              @relation("TeamCreator", fields: [createdById], references: [id])
+  members        TeamMember[]
+  kitchenBatches ProductionBatch[] @relation("KitchenTeamBatches")
+  driverBatches  ProductionBatch[] @relation("DriverTeamBatches")
 }
 
 model TeamMember {
@@ -100,23 +119,36 @@ model Menu {
 }
 
 model ProductionBatch {
-  id            String                @id @default(cuid())
-  code          String                @unique
-  date          DateTime
-  portionType   String
-  menuId        String
-  menuSnapshot  String
-  targetQty     Int
-  actualQty     Int
-  status        String
-  readyAt       DateTime?
-  safeUntil     DateTime?
-  sppgId        String
-  createdAt     DateTime              @default(now())
-  menu          Menu                  @relation(fields: [menuId], references: [id])
-  sppg          Sppg                  @relation(fields: [sppgId], references: [id])
-  components    ProductionComponent[]
-  allocations   SchoolAllocation[]
+  id                   String                @id @default(cuid())
+  code                 String                @unique
+  date                 DateTime
+  portionType          String
+  menuId               String
+  menuSnapshot         String
+  targetQty            Int
+  actualQty            Int
+  status               String
+  readyAt              DateTime?
+  safeUntil            DateTime?
+  sppgId               String
+  productionLocationId String?
+  kitchenTeamId        String?
+  driverTeamId         String?
+  createdById          String?
+  createdAt            DateTime              @default(now())
+  menu                 Menu                  @relation(fields: [menuId], references: [id])
+  sppg                 Sppg                  @relation(fields: [sppgId], references: [id])
+  productionLocation   ProductionLocation?   @relation(fields: [productionLocationId], references: [id], onDelete: SetNull)
+  kitchenTeam          Team?                 @relation("KitchenTeamBatches", fields: [kitchenTeamId], references: [id], onDelete: SetNull)
+  driverTeam           Team?                 @relation("DriverTeamBatches", fields: [driverTeamId], references: [id], onDelete: SetNull)
+  createdBy            User?                 @relation("ProductionBatchCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  components           ProductionComponent[]
+  allocations          SchoolAllocation[]
+
+  @@index([sppgId])
+  @@index([productionLocationId])
+  @@index([kitchenTeamId])
+  @@index([driverTeamId])
 }
 
 model ProductionComponent {

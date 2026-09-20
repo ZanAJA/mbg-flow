@@ -16,6 +16,8 @@ type Batch = {
   safetyStatus: string;
   targetQty: number;
   menu: { name: string };
+  productionLocation: { name: string } | null;
+  kitchenTeam: { name: string } | null;
 };
 
 export function ProductionListContainer() {
@@ -23,6 +25,7 @@ export function ProductionListContainer() {
   const query = useQuery({
     queryKey: ["production-batches"],
     queryFn: () => apiFetch<Batch[]>("/api/production-batches"),
+    refetchInterval: 8_000,
   });
   const rows = query.data?.data ?? [];
 
@@ -48,6 +51,10 @@ export function ProductionListContainer() {
                     <p className="text-sm text-muted-foreground">
                       {batch.menu.name} · {batch.portionType === "BESAR" ? "Porsi Besar" : "Porsi Kecil"} ·{" "}
                       {batch.targetQty} porsi
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {batch.productionLocation?.name ?? "Lokasi belum ditentukan"}
+                      {batch.kitchenTeam ? ` · ${batch.kitchenTeam.name}` : ""}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">

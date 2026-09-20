@@ -22,6 +22,9 @@ type Batch = {
   safeUntil: string | null;
   menu: { name: string };
   sppg: { name: string; address: string };
+  productionLocation: { name: string; address: string } | null;
+  kitchenTeam: { name: string } | null;
+  driverTeam: { name: string } | null;
   allocations: Array<{
     portionQty: number;
     packedQty: number;
@@ -64,6 +67,9 @@ export function BatchDetailContainer() {
                 <div className="space-y-2 text-sm">
                   <p><span className="text-muted-foreground">Menu:</span> {batch.menu.name}</p>
                   <p><span className="text-muted-foreground">Asal SPPG:</span> {batch.sppg.name} · {batch.sppg.address}</p>
+                  <p><span className="text-muted-foreground">Lokasi produksi:</span> {batch.productionLocation ? `${batch.productionLocation.name} · ${batch.productionLocation.address}` : "Belum ditentukan"}</p>
+                  <p><span className="text-muted-foreground">Tim dapur:</span> {batch.kitchenTeam?.name ?? "Semua tim dapur"}</p>
+                  <p><span className="text-muted-foreground">Tim pengemudi:</span> {batch.driverTeam?.name ?? "Semua tim pengemudi"}</p>
                   <p><span className="text-muted-foreground">Porsi:</span> {batch.actualQty}/{batch.targetQty}</p>
                   <p><span className="text-muted-foreground">Ready at:</span> {formatDateTime(batch.readyAt)}</p>
                   <p><span className="text-muted-foreground">Safe until:</span> {formatDateTime(batch.safeUntil)}</p>
